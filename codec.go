@@ -28,6 +28,9 @@ type (
 	DisfixBytes [DisfixBytesLen]byte // Disamb+Prefix
 )
 
+type ConcreteMarshaller func(interface{}) ([]byte, error)
+type ConcreteUnmarshaller func([]byte, ConcreteInfo, reflect.Value) (int, error)
+
 // Copy into PrefixBytes
 func NewPrefixBytes(prefixBytes []byte) PrefixBytes {
 	pb := PrefixBytes{}
@@ -133,6 +136,9 @@ type Codec struct {
 	concreteInfos    []*TypeInfo
 	disfixToTypeInfo map[DisfixBytes]*TypeInfo
 	nameToTypeInfo   map[string]*TypeInfo
+
+	nameToConcreteMarshaller   map[string]ConcreteMarshaller
+	nameToConcreteUnmarshaller map[string]ConcreteUnmarshaller
 }
 
 func NewCodec() *Codec {
@@ -141,6 +147,9 @@ func NewCodec() *Codec {
 		typeInfos:        make(map[reflect.Type]*TypeInfo),
 		disfixToTypeInfo: make(map[DisfixBytes]*TypeInfo),
 		nameToTypeInfo:   make(map[string]*TypeInfo),
+
+		nameToConcreteMarshaller:   make(map[string]ConcreteMarshaller),
+		nameToConcreteUnmarshaller: make(map[string]ConcreteUnmarshaller),
 	}
 	return cdc
 }
@@ -238,6 +247,40 @@ func (cdc *Codec) RegisterConcrete(o interface{}, name string, copts *ConcreteOp
 		cdc.addCheckConflictsWithConcrete_nolock(info)
 		cdc.setTypeInfo_nolock(info)
 	}()
+}
+
+func (cdc *Codec) RegisterConcreteMarshaller(name string, marshaller ConcreteMarshaller) {
+	cdc.assertNotSealed()
+
+	cdc.mtx.Lock()
+	defer cdc.mtx.Unlock()
+
+	if _, ok := cdc.nameToTypeInfo[name]; !ok {
+		panic(fmt.Sprintf("name <%s> should register concrete type first", name))
+	}
+
+	if _, ok := cdc.nameToConcreteMarshaller[name]; ok {
+		panic(fmt.Sprintf("marshaller already registered for %s", name))
+	}
+
+	cdc.nameToConcreteMarshaller[name] = marshaller
+}
+
+func (cdc *Codec) RegisterConcreteUnmarshaller(name string, unmarshaller ConcreteUnmarshaller) {
+	cdc.assertNotSealed()
+
+	cdc.mtx.Lock()
+	defer cdc.mtx.Unlock()
+
+	if _, ok := cdc.nameToTypeInfo[name]; !ok {
+		panic(fmt.Sprintf("name <%s> should register concrete type first", name))
+	}
+
+	if _, ok := cdc.nameToConcreteUnmarshaller[name]; ok {
+		panic(fmt.Sprintf("unmarshaller already registered for %s", name))
+	}
+
+	cdc.nameToConcreteUnmarshaller[name] = unmarshaller
 }
 
 func (cdc *Codec) Seal() *Codec {

@@ -356,6 +356,13 @@ func (cdc *Codec) decodeReflectBinaryInterface(bz []byte, iinfo *TypeInfo, rv re
 		return
 	}
 
+	if customUnmarshaller, ok := cdc.nameToConcreteUnmarshaller[cinfo.Name]; ok {
+		_n, err = customUnmarshaller(bz, cinfo.ConcreteInfo, rv)
+		if err == nil {
+			return n + _n, nil
+		}
+	}
+
 	// Construct the concrete type.
 	var crv, irvSet = constructConcreteType(cinfo)
 
