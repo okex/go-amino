@@ -356,9 +356,11 @@ func (cdc *Codec) decodeReflectBinaryInterface(bz []byte, iinfo *TypeInfo, rv re
 		return
 	}
 
-	if customUnmarshaller, ok := cdc.nameToConcreteUnmarshaller[cinfo.Name]; ok {
-		_n, err = customUnmarshaller(bz, cinfo.ConcreteInfo, rv)
+	if customUnmarshaller, ok := cdc.nameToConcreteUnmarshaller.Load(cinfo.Name); ok {
+		var v interface{}
+		_n, v, err = customUnmarshaller.(ConcreteUnmarshaller)(bz)
 		if err == nil {
+			rv.Set(reflect.ValueOf(v))
 			return n + _n, nil
 		}
 	}
