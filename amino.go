@@ -317,6 +317,46 @@ func (cdc *Codec) MustUnmarshalBinaryLengthPrefixed(bz []byte, ptr interface{}) 
 	}
 }
 
+func (cdc *Codec) TryUnmarshalBinaryBareInterfaceWithRegisteredUbmarshaller(bz []byte, ptr interface{}) (interface{}, bool) {
+	rv := reflect.ValueOf(ptr)
+	if rv.Kind() != reflect.Ptr {
+		panic("Unmarshal expects a pointer")
+	}
+	rv = rv.Elem()
+	rt := rv.Type()
+
+	iinfo, err := cdc.getTypeInfo_wlock(rt)
+	if err != nil {
+		return nil, false
+	}
+
+	disamb, hasDisamb, prefix, hasPrefix, _n, err := DecodeDisambPrefixBytes(bz)
+
+	// Get concrete type info from disfix/prefix.
+	var cinfo *TypeInfo
+	if hasDisamb {
+		cinfo, err = cdc.getTypeInfoFromDisfix_rlock(toDisfix(disamb, prefix))
+	} else if hasPrefix {
+		cinfo, err = cdc.getTypeInfoFromPrefix_rlock(iinfo, prefix)
+	} else {
+		err = errors.New("Expected disambiguation or prefix bytes.")
+	}
+	if err != nil {
+		return nil, false
+	}
+	bz = bz[_n:]
+
+	if customUnmarshaller, ok := cdc.nameToConcreteUnmarshaller.Load(cinfo.Name); ok {
+		_, v, err := customUnmarshaller.(ConcreteUnmarshaller)(bz)
+		if err != nil {
+			return nil, false
+		}
+		return v, true
+	}
+
+	return nil, false
+}
+
 // UnmarshalBinaryBare will panic if ptr is a nil-pointer.
 func (cdc *Codec) UnmarshalBinaryBare(bz []byte, ptr interface{}) error {
 
