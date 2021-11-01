@@ -347,7 +347,7 @@ func (cdc *Codec) TryUnmarshalBinaryBareInterfaceWithRegisteredUbmarshaller(bz [
 	bz = bz[_n:]
 
 	if customUnmarshaller, ok := cdc.nameToConcreteUnmarshaller.Load(cinfo.Name); ok {
-		_, v, err := customUnmarshaller.(ConcreteUnmarshaller)(bz)
+		v, _, err := customUnmarshaller.(ConcreteUnmarshaller)(cdc, bz)
 		if err != nil {
 			return nil, false
 		}

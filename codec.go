@@ -29,7 +29,7 @@ type (
 )
 
 type ConcreteMarshaller func(interface{}) ([]byte, error)
-type ConcreteUnmarshaller func([]byte) (int, interface{}, error)
+type ConcreteUnmarshaller func(*Codec, []byte) (interface{}, int, error)
 
 // Copy into PrefixBytes
 func NewPrefixBytes(prefixBytes []byte) PrefixBytes {
