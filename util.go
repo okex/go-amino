@@ -1,7 +1,7 @@
 package amino
 
-// ParseProtoPosAndTypeMustOneByte Parse feild number and type from one byte,
-// if original feild number and type encode to multiple bytes, you should not use this function.
+// ParseProtoPosAndTypeMustOneByte Parse field number and type from one byte,
+// if original field number and type encode to multiple bytes, you should not use this function.
 func ParseProtoPosAndTypeMustOneByte(data byte) (pos int, aminoType Typ3) {
 	if data&0x80 == 0x80 {
 		panic("varint more than one byte")

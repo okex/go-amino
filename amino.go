@@ -317,6 +317,7 @@ func (cdc *Codec) MustUnmarshalBinaryLengthPrefixed(bz []byte, ptr interface{}) 
 	}
 }
 
+// TryUnmarshalBinaryBareInterfaceWithRegisteredUbmarshaller try to unmarshal the data with custom unmarshaller if it exists
 func (cdc *Codec) TryUnmarshalBinaryBareInterfaceWithRegisteredUbmarshaller(bz []byte, ptr interface{}) (interface{}, bool) {
 	rv := reflect.ValueOf(ptr)
 	if rv.Kind() != reflect.Ptr {

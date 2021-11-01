@@ -246,6 +246,7 @@ func (cdc *Codec) RegisterConcrete(o interface{}, name string, copts *ConcreteOp
 	}()
 }
 
+// RegisterConcreteMarshaller registers a custom marshaller for a concrete type
 func (cdc *Codec) RegisterConcreteMarshaller(name string, marshaller ConcreteMarshaller) {
 	cdc.assertNotSealed()
 
@@ -263,6 +264,7 @@ func (cdc *Codec) RegisterConcreteMarshaller(name string, marshaller ConcreteMar
 	cdc.nameToConcreteMarshaller.Store(name, marshaller)
 }
 
+// RegisterConcreteUnmarshaller registers a custom unmarshaller for a concrete type
 func (cdc *Codec) RegisterConcreteUnmarshaller(name string, unmarshaller ConcreteUnmarshaller) {
 	cdc.assertNotSealed()
 
