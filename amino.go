@@ -317,8 +317,8 @@ func (cdc *Codec) MustUnmarshalBinaryLengthPrefixed(bz []byte, ptr interface{}) 
 	}
 }
 
-// TryUnmarshalBinaryBareInterfaceWithRegisteredUbmarshaller try to unmarshal the data with custom unmarshaller if it exists
-func (cdc *Codec) TryUnmarshalBinaryBareInterfaceWithRegisteredUbmarshaller(bz []byte, ptr interface{}) (interface{}, bool) {
+// UnmarshalBinaryBareInterfaceWithRegisteredUbmarshaller try to unmarshal the data with custom unmarshaller if it exists
+func (cdc *Codec) UnmarshalBinaryBareWithRegisteredUbmarshaller(bz []byte, ptr interface{}) (interface{}, error) {
 	rv := reflect.ValueOf(ptr)
 	if rv.Kind() != reflect.Ptr {
 		panic("Unmarshal expects a pointer")
@@ -328,34 +328,51 @@ func (cdc *Codec) TryUnmarshalBinaryBareInterfaceWithRegisteredUbmarshaller(bz [
 
 	iinfo, err := cdc.getTypeInfo_wlock(rt)
 	if err != nil {
-		return nil, false
+		return nil, err
 	}
 
-	disamb, hasDisamb, prefix, hasPrefix, _n, err := DecodeDisambPrefixBytes(bz)
+	var typeBytesLen int
+	var typeName string
 
-	// Get concrete type info from disfix/prefix.
-	var cinfo *TypeInfo
-	if hasDisamb {
-		cinfo, err = cdc.getTypeInfoFromDisfix_rlock(toDisfix(disamb, prefix))
-	} else if hasPrefix {
-		cinfo, err = cdc.getTypeInfoFromPrefix_rlock(iinfo, prefix)
-	} else {
-		err = errors.New("Expected disambiguation or prefix bytes.")
-	}
-	if err != nil {
-		return nil, false
-	}
-	bz = bz[_n:]
+	if iinfo.Registered {
+		pb := iinfo.Prefix.Bytes()
+		if len(bz) < 4 {
+			return nil, fmt.Errorf("expected to read prefix bytes %X (since it is registered concrete) but got %X", pb, bz)
+		} else if !bytes.Equal(bz[:4], pb) {
+			return nil, fmt.Errorf("expected to read prefix bytes %X (since it is registered concrete) but got %X...", pb, bz[:4])
+		}
+		typeBytesLen = 4
+		typeName = iinfo.Name
 
-	if customUnmarshaller, ok := cdc.nameToConcreteUnmarshaller.Load(cinfo.Name); ok {
+	} else if iinfo.Type.Kind() == reflect.Interface {
+		disamb, hasDisamb, prefix, hasPrefix, _n, err := DecodeDisambPrefixBytes(bz)
+
+		// Get concrete type info from disfix/prefix.
+		var cinfo *TypeInfo
+		if hasDisamb {
+			cinfo, err = cdc.getTypeInfoFromDisfix_rlock(toDisfix(disamb, prefix))
+		} else if hasPrefix {
+			cinfo, err = cdc.getTypeInfoFromPrefix_rlock(iinfo, prefix)
+		} else {
+			err = errors.New("Expected disambiguation or prefix bytes.")
+		}
+		if err != nil {
+			return nil, err
+		}
+		typeBytesLen = _n
+		typeName = cinfo.Name
+	}
+
+	if customUnmarshaller, ok := cdc.nameToConcreteUnmarshaller.Load(typeName); ok {
+		bz = bz[typeBytesLen:]
 		v, _, err := customUnmarshaller.(ConcreteUnmarshaller)(cdc, bz)
 		if err != nil {
-			return nil, false
+			return nil, err
 		}
-		return v, true
+		return v, nil
+	} else {
+		return nil, fmt.Errorf("can't find unmarshaller")
 	}
-
-	return nil, false
 }
 
 // UnmarshalBinaryBare will panic if ptr is a nil-pointer.
