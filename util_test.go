@@ -7,7 +7,7 @@ import (
 )
 
 func TestParseProtoPosAndTypeMustOneByte(t *testing.T) {
-	pos, pbType := ParseProtoPosAndTypeMustOneByte(0x0a)
+	pos, pbType, err := ParseProtoPosAndTypeMustOneByte(0x0a)
 	if pos != 1 {
 		t.Fatal("parse pos error")
 	}
@@ -15,7 +15,6 @@ func TestParseProtoPosAndTypeMustOneByte(t *testing.T) {
 		t.Fatal("parse type error")
 	}
 
-	require.Panics(t, func() {
-		ParseProtoPosAndTypeMustOneByte(0x82)
-	})
+	pos, pbType, err = ParseProtoPosAndTypeMustOneByte(0x82)
+	require.Error(t, err)
 }
