@@ -253,6 +253,30 @@ func (cdc *Codec) UnmarshalBinaryLengthPrefixed(bz []byte, ptr interface{}) erro
 	return cdc.UnmarshalBinaryBare(bz, ptr)
 }
 
+// Like UnmarshalBinaryBareWithRegisteredUbmarshaller, but will first decode the byte-length prefix.
+func (cdc *Codec) UnmarshalBinaryLengthPrefixedWithRegisteredUbmarshaller(bz []byte, ptr interface{}) (interface{}, error) {
+	if len(bz) == 0 {
+		return nil, errors.New("UnmarshalBinaryLengthPrefixed cannot decode empty bytes")
+	}
+
+	// Read byte-length prefix.
+	u64, n := binary.Uvarint(bz)
+	if n < 0 {
+		return nil, fmt.Errorf("Error reading msg byte-length prefix: got code %v", n)
+	}
+	if u64 > uint64(len(bz)-n) {
+		return nil, fmt.Errorf("Not enough bytes to read in UnmarshalBinaryLengthPrefixed, want %v more bytes but only have %v",
+			u64, len(bz)-n)
+	} else if u64 < uint64(len(bz)-n) {
+		return nil, fmt.Errorf("Bytes left over in UnmarshalBinaryLengthPrefixed, should read %v more bytes but have %v",
+			u64, len(bz)-n)
+	}
+	bz = bz[n:]
+
+	// Decode.
+	return cdc.UnmarshalBinaryBareWithRegisteredUbmarshaller(bz, ptr)
+}
+
 // Like UnmarshalBinaryBare, but will first read the byte-length prefix.
 // UnmarshalBinaryLengthPrefixedReader will panic if ptr is a nil-pointer.
 // If maxSize is 0, there is no limit (not recommended).
