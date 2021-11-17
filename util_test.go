@@ -15,6 +15,14 @@ func TestParseProtoPosAndTypeMustOneByte(t *testing.T) {
 		t.Fatal("parse type error")
 	}
 
+	data, err := EncodeProtoPosAndTypeMustOneByte(pos, pbType)
+	if err != nil {
+		t.Fatal("err shoul be nil")
+	}
+	if data != 0x0a {
+		t.Fatal("encode error")
+	}
+
 	pos, pbType, err = ParseProtoPosAndTypeMustOneByte(0x82)
 	require.Error(t, err)
 }
