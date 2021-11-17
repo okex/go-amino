@@ -344,6 +344,92 @@ func (cdc *Codec) MustUnmarshalBinaryLengthPrefixed(bz []byte, ptr interface{}) 
 	}
 }
 
+func (cdc *Codec) MarshalBinaryBareWithRegisteredMarshaller(o interface{}) ([]byte, error) {
+	// Dereference value if pointer.
+	var rv, _, isNilPtr = derefPointers(reflect.ValueOf(o))
+	if isNilPtr {
+		// NOTE: You can still do so by calling
+		// `.MarshalBinaryLengthPrefixed(struct{ *SomeType })` or so on.
+		return nil, errors.New("MarshalBinaryBareWithRegisteredMarshaller cannot marshal a nil pointer directly.")
+	}
+
+	rt := rv.Type()
+	info, err := cdc.getTypeInfo_wlock(rt)
+	if err != nil {
+		return nil, err
+	}
+
+	var typeName string
+	var buf bytes.Buffer
+
+	if info.Type.Kind() == reflect.Interface {
+		var iinfo = info
+		if rv.IsNil() {
+			return nil, errors.New("cannot marshal nil interface")
+		}
+		var crv, isPtr, isNilPtr = derefPointers(rv.Elem())
+		if isPtr && crv.Kind() == reflect.Interface {
+			return nil, errors.New("should not happen")
+		}
+		if isNilPtr {
+			return nil, errors.New(fmt.Sprintf("Illegal nil-pointer of type %v for registered interface %v. "+
+				"For compatibility with other languages, nil-pointer interface values are forbidden.", crv.Type(), iinfo.Type))
+		}
+		var crt = crv.Type()
+
+		// Get *TypeInfo for concrete type.
+		var cinfo *TypeInfo
+		cinfo, err = cdc.getTypeInfo_wlock(crt)
+		if err != nil {
+			return nil, err
+		}
+		if !cinfo.Registered {
+			return nil, fmt.Errorf("Cannot encode unregistered concrete type %v.", crt)
+		}
+
+		var needDisamb = false
+
+		if iinfo.AlwaysDisambiguate {
+			needDisamb = true
+		} else if len(iinfo.Implementers[cinfo.Prefix]) > 1 {
+			needDisamb = true
+		}
+		if needDisamb {
+			_, err = buf.Write(append([]byte{0x00}, cinfo.Disamb[:]...))
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		// Write prefix bytes.
+		_, err = buf.Write(cinfo.Prefix.Bytes())
+		if err != nil {
+			return nil, err
+		}
+		typeName = cinfo.Name
+	} else if info.Registered {
+		typeName = info.Name
+		_, err = buf.Write(info.Prefix.Bytes())
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if marshaller, ok := cdc.nameToConcreteMarshaller.Load(typeName); ok {
+		bz, err := marshaller.(ConcreteMarshaller)(cdc, o)
+		if err != nil {
+			return nil, err
+		}
+		_, err = buf.Write(bz)
+		if err != nil {
+			return nil, err
+		}
+		return buf.Bytes(), nil
+	} else {
+		return nil, fmt.Errorf("can't find unmarshaller")
+	}
+}
+
 // UnmarshalBinaryBareInterfaceWithRegisteredUbmarshaller try to unmarshal the data with custom unmarshaller if it exists
 func (cdc *Codec) UnmarshalBinaryBareWithRegisteredUbmarshaller(bz []byte, ptr interface{}) (interface{}, error) {
 	rv := reflect.ValueOf(ptr)

@@ -28,7 +28,7 @@ type (
 	DisfixBytes [DisfixBytesLen]byte // Disamb+Prefix
 )
 
-type ConcreteMarshaller func(interface{}) ([]byte, error)
+type ConcreteMarshaller func(*Codec, interface{}) ([]byte, error)
 type ConcreteUnmarshaller func(*Codec, []byte) (interface{}, int, error)
 
 // Copy into PrefixBytes
