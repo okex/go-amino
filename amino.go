@@ -163,6 +163,32 @@ func (cdc *Codec) MarshalBinaryLengthPrefixed(o interface{}) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+func (cdc *Codec) MarshalBinaryLengthPrefixedWithRegisteredMarshaller(o interface{}) ([]byte, error) {
+
+	// Write the bytes here.
+	var buf = new(bytes.Buffer)
+
+	// Write the bz without length-prefixing.
+	bz, err := cdc.MarshalBinaryBareWithRegisteredMarshaller(o)
+	if err != nil {
+		return nil, err
+	}
+
+	// Write uvarint(len(bz)).
+	err = EncodeUvarint(buf, uint64(len(bz)))
+	if err != nil {
+		return nil, err
+	}
+
+	// Write bz.
+	_, err = buf.Write(bz)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
 // MarshalBinaryLengthPrefixedWriter writes the bytes as would be returned from
 // MarshalBinaryLengthPrefixed to the writer w.
 func (cdc *Codec) MarshalBinaryLengthPrefixedWriter(w io.Writer, o interface{}) (n int64, err error) {
