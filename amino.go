@@ -202,6 +202,17 @@ func (cdc *Codec) MarshalBinaryLengthPrefixedWriter(w io.Writer, o interface{}) 
 	return
 }
 
+func (cdc *Codec) MarshalBinaryLengthPrefixedWriterWithRegiteredMarshaller(w io.Writer, o interface{}) (n int64, err error) {
+	var bz, _n = []byte(nil), int(0)
+	bz, err = cdc.MarshalBinaryLengthPrefixedWithRegisteredMarshaller(o)
+	if err != nil {
+		return 0, err
+	}
+	_n, err = w.Write(bz) // TODO: handle overflow in 32-bit systems.
+	n = int64(_n)
+	return
+}
+
 // Panics if error.
 func (cdc *Codec) MustMarshalBinaryLengthPrefixed(o interface{}) []byte {
 	bz, err := cdc.MarshalBinaryLengthPrefixed(o)
