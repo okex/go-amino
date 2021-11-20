@@ -1,6 +1,7 @@
 package amino
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -190,4 +191,13 @@ func ByteSliceSize(bz []byte) int {
 
 func EncodeString(w io.Writer, s string) (err error) {
 	return EncodeByteSlice(w, []byte(s))
+}
+
+func EncodeStringToBuffer(buf *bytes.Buffer, s string) (err error) {
+	err = EncodeUvarint(buf, uint64(len(s)))
+	if err != nil {
+		return
+	}
+	_, err = buf.WriteString(s)
+	return
 }
