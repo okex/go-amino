@@ -293,7 +293,7 @@ func (cdc *Codec) UnmarshalBinaryLengthPrefixed(bz []byte, ptr interface{}) erro
 	return cdc.UnmarshalBinaryBare(bz, ptr)
 }
 
-// Like UnmarshalBinaryBareWithRegisteredUbmarshaller, but will first decode the byte-length prefix.
+// Like UnmarshalBinaryBareWithRegisteredUnmarshaller, but will first decode the byte-length prefix.
 func (cdc *Codec) UnmarshalBinaryLengthPrefixedWithRegisteredUbmarshaller(bz []byte, ptr interface{}) (interface{}, error) {
 	if len(bz) == 0 {
 		return nil, errors.New("UnmarshalBinaryLengthPrefixed cannot decode empty bytes")
@@ -314,7 +314,7 @@ func (cdc *Codec) UnmarshalBinaryLengthPrefixedWithRegisteredUbmarshaller(bz []b
 	bz = bz[n:]
 
 	// Decode.
-	return cdc.UnmarshalBinaryBareWithRegisteredUbmarshaller(bz, ptr)
+	return cdc.UnmarshalBinaryBareWithRegisteredUnmarshaller(bz, ptr)
 }
 
 // Like UnmarshalBinaryBare, but will first read the byte-length prefix.
@@ -468,7 +468,7 @@ func (cdc *Codec) MarshalBinaryBareWithRegisteredMarshaller(o interface{}) ([]by
 }
 
 // UnmarshalBinaryBareInterfaceWithRegisteredUbmarshaller try to unmarshal the data with custom unmarshaller if it exists
-func (cdc *Codec) UnmarshalBinaryBareWithRegisteredUbmarshaller(bz []byte, ptr interface{}) (interface{}, error) {
+func (cdc *Codec) UnmarshalBinaryBareWithRegisteredUnmarshaller(bz []byte, ptr interface{}) (interface{}, error) {
 	rv := reflect.ValueOf(ptr)
 	if rv.Kind() != reflect.Ptr {
 		panic("Unmarshal expects a pointer")
