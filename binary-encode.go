@@ -1,7 +1,6 @@
 package amino
 
 import (
-	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -280,7 +279,8 @@ func (cdc *Codec) encodeReflectBinaryList(w io.Writer, info *TypeInfo, rv reflec
 
 	// Proto3 byte-length prefixing incurs alloc cost on the encoder.
 	// Here we incur it for unpacked form for ease of dev.
-	buf := bytes.NewBuffer(nil)
+	buf := GetBuffer()
+	defer PutBuffer(buf)
 
 	// If elem is not already a ByteLength type, write in packed form.
 	// This is a Proto wart due to Proto backwards compatibility issues.

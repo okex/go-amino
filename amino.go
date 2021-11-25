@@ -161,7 +161,7 @@ func (cdc *Codec) MarshalBinaryLengthPrefixed(o interface{}) ([]byte, error) {
 		return nil, err
 	}
 
-	return buf.Bytes(), nil
+	return buf.BytesCopy(), nil
 }
 
 func (cdc *Codec) MarshalBinaryLengthPrefixedWithRegisteredMarshaller(o interface{}) ([]byte, error) {
@@ -188,7 +188,7 @@ func (cdc *Codec) MarshalBinaryLengthPrefixedWithRegisteredMarshaller(o interfac
 		return nil, err
 	}
 
-	return buf.Bytes(), nil
+	return buf.BytesCopy(), nil
 }
 
 // MarshalBinaryLengthPrefixedWriter writes the bytes as would be returned from
@@ -250,16 +250,12 @@ func (cdc *Codec) MarshalBinaryBare(o interface{}) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	bz = buf.Bytes()
+	bz = buf.BytesCopy()
 
 	// If registered concrete, prepend prefix bytes.
 	if info.Registered {
 		pb := info.Prefix.Bytes()
 		bz = append(pb, bz...)
-	}
-
-	if len(bz) == 0 {
-		return nil, nil
 	}
 
 	return bz, nil
@@ -469,11 +465,7 @@ func (cdc *Codec) MarshalBinaryBareWithRegisteredMarshaller(o interface{}) ([]by
 		if err != nil {
 			return nil, err
 		}
-		bz = buf.Bytes()
-		if len(bz) == 0 {
-			return nil, nil
-		}
-		return bz, nil
+		return buf.BytesCopy(), nil
 	} else {
 		return nil, fmt.Errorf("can't find unmarshaller")
 	}
@@ -617,7 +609,7 @@ func (cdc *Codec) MarshalJSON(o interface{}) ([]byte, error) {
 			return nil, err
 		}
 	}
-	return w.Bytes(), nil
+	return w.BytesCopy(), nil
 }
 
 // MustMarshalJSON panics if an error occurs. Besides tha behaves exactly like MarshalJSON.
@@ -676,9 +668,9 @@ func (cdc *Codec) MarshalJSONIndent(o interface{}, prefix, indent string) ([]byt
 	}
 	var out = GetBuffer()
 	defer PutBuffer(out)
-	err = json.Indent(out, bz, prefix, indent)
+	err = json.Indent(&out.Buffer, bz, prefix, indent)
 	if err != nil {
 		return nil, err
 	}
-	return out.Bytes(), nil
+	return out.BytesCopy(), nil
 }
