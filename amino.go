@@ -258,6 +258,10 @@ func (cdc *Codec) MarshalBinaryBare(o interface{}) ([]byte, error) {
 		bz = append(pb, bz...)
 	}
 
+	if len(bz) == 0 {
+		return nil, nil
+	}
+
 	return bz, nil
 }
 
@@ -465,7 +469,11 @@ func (cdc *Codec) MarshalBinaryBareWithRegisteredMarshaller(o interface{}) ([]by
 		if err != nil {
 			return nil, err
 		}
-		return buf.Bytes(), nil
+		bz = buf.Bytes()
+		if len(bz) == 0 {
+			return nil, nil
+		}
+		return bz, nil
 	} else {
 		return nil, fmt.Errorf("can't find unmarshaller")
 	}
