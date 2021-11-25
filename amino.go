@@ -140,7 +140,8 @@ func (typ Typ3) String() string {
 func (cdc *Codec) MarshalBinaryLengthPrefixed(o interface{}) ([]byte, error) {
 
 	// Write the bytes here.
-	var buf = new(bytes.Buffer)
+	var buf = GetBuffer()
+	defer PutBuffer(buf)
 
 	// Write the bz without length-prefixing.
 	bz, err := cdc.MarshalBinaryBare(o)
@@ -166,7 +167,8 @@ func (cdc *Codec) MarshalBinaryLengthPrefixed(o interface{}) ([]byte, error) {
 func (cdc *Codec) MarshalBinaryLengthPrefixedWithRegisteredMarshaller(o interface{}) ([]byte, error) {
 
 	// Write the bytes here.
-	var buf = new(bytes.Buffer)
+	var buf = GetBuffer()
+	defer PutBuffer(buf)
 
 	// Write the bz without length-prefixing.
 	bz, err := cdc.MarshalBinaryBareWithRegisteredMarshaller(o)
@@ -237,7 +239,8 @@ func (cdc *Codec) MarshalBinaryBare(o interface{}) ([]byte, error) {
 
 	// Encode Amino:binary bytes.
 	var bz []byte
-	buf := new(bytes.Buffer)
+	buf := GetBuffer()
+	defer PutBuffer(buf)
 	rt := rv.Type()
 	info, err := cdc.getTypeInfo_wlock(rt)
 	if err != nil {
@@ -397,7 +400,8 @@ func (cdc *Codec) MarshalBinaryBareWithRegisteredMarshaller(o interface{}) ([]by
 	}
 
 	var typeName string
-	var buf bytes.Buffer
+	var buf = GetBuffer()
+	defer PutBuffer(buf)
 
 	if info.Type.Kind() == reflect.Interface {
 		var iinfo = info
@@ -573,7 +577,8 @@ func (cdc *Codec) MarshalJSON(o interface{}) ([]byte, error) {
 		return []byte("null"), nil
 	}
 	rt := rv.Type()
-	w := new(bytes.Buffer)
+	w := GetBuffer()
+	defer PutBuffer(w)
 	info, err := cdc.getTypeInfo_wlock(rt)
 	if err != nil {
 		return nil, err
@@ -661,8 +666,9 @@ func (cdc *Codec) MarshalJSONIndent(o interface{}, prefix, indent string) ([]byt
 	if err != nil {
 		return nil, err
 	}
-	var out bytes.Buffer
-	err = json.Indent(&out, bz, prefix, indent)
+	var out = GetBuffer()
+	defer PutBuffer(out)
+	err = json.Indent(out, bz, prefix, indent)
 	if err != nil {
 		return nil, err
 	}

@@ -202,7 +202,8 @@ func (cdc *Codec) encodeReflectBinaryInterface(w io.Writer, iinfo *TypeInfo, rv 
 	}
 
 	// For Proto3 compatibility, encode interfaces as ByteLength.
-	buf := bytes.NewBuffer(nil)
+	buf := GetBuffer()
+	defer PutBuffer(buf)
 
 	// Write disambiguation bytes if needed.
 	var needDisamb bool = false
@@ -378,7 +379,8 @@ func (cdc *Codec) encodeReflectBinaryStruct(w io.Writer, info *TypeInfo, rv refl
 
 	// Proto3 incurs a cost in writing non-root structs.
 	// Here we incur it for root structs as well for ease of dev.
-	buf := bytes.NewBuffer(nil)
+	buf := GetBuffer()
+	defer PutBuffer(buf)
 
 	switch info.Type {
 
