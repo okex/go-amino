@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"time"
 )
@@ -298,6 +299,29 @@ func DecodeByteSlice(bz []byte) (bz2 []byte, n int, err error) {
 	bz2 = make([]byte, count)
 	copy(bz2, bz[0:count])
 	n += int(count)
+	return
+}
+
+func DecodeByteSliceToWriter(writer io.Writer, bz []byte) (n int, err error) {
+	var count uint64
+	var _n int
+	count, _n, err = DecodeUvarint(bz)
+	if slide(&bz, &n, _n) && err != nil {
+		return
+	}
+	if int(count) < 0 {
+		err = fmt.Errorf("invalid negative length %v decoding []byte", count)
+		return
+	}
+	if len(bz) < int(count) {
+		err = fmt.Errorf("insufficient bytes decoding []byte of length %v", count)
+		return
+	}
+	_n, err = writer.Write(bz[0:count])
+	if err != nil {
+		return
+	}
+	n += _n
 	return
 }
 
