@@ -17,6 +17,10 @@ func EncodeInt8(w io.Writer, i int8) (err error) {
 	return EncodeVarint(w, int64(i))
 }
 
+func EncodeInt8ToBuffer(w *bytes.Buffer, i int8) (err error) {
+	return EncodeVarintToBuffer(w, int64(i))
+}
+
 func EncodeInt16(w io.Writer, i int16) (err error) {
 	return EncodeVarint(w, int64(i))
 }
@@ -199,6 +203,15 @@ func EncodeByteSlice(w io.Writer, bz []byte) (err error) {
 	return
 }
 
+func EncodeByteSliceToBuffer(w *bytes.Buffer, bz []byte) (err error) {
+	err = EncodeUvarintToBuffer(w, uint64(len(bz)))
+	if err != nil {
+		return
+	}
+	_, err = w.Write(bz)
+	return
+}
+
 func ByteSliceSize(bz []byte) int {
 	return UvarintSize(uint64(len(bz))) + len(bz)
 }
@@ -208,7 +221,7 @@ func EncodeString(w io.Writer, s string) (err error) {
 }
 
 func EncodeStringToBuffer(buf *bytes.Buffer, s string) (err error) {
-	err = EncodeUvarint(buf, uint64(len(s)))
+	err = EncodeUvarintToBuffer(buf, uint64(len(s)))
 	if err != nil {
 		return
 	}
