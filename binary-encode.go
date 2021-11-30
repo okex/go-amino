@@ -1,6 +1,7 @@
 package amino
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -201,8 +202,7 @@ func (cdc *Codec) encodeReflectBinaryInterface(w io.Writer, iinfo *TypeInfo, rv 
 	}
 
 	// For Proto3 compatibility, encode interfaces as ByteLength.
-	buf := GetBuffer()
-	defer PutBuffer(buf)
+	buf := bytes.NewBuffer(nil)
 
 	// Write disambiguation bytes if needed.
 	var needDisamb bool = false
@@ -279,8 +279,7 @@ func (cdc *Codec) encodeReflectBinaryList(w io.Writer, info *TypeInfo, rv reflec
 
 	// Proto3 byte-length prefixing incurs alloc cost on the encoder.
 	// Here we incur it for unpacked form for ease of dev.
-	buf := GetBuffer()
-	defer PutBuffer(buf)
+	buf := bytes.NewBuffer(nil)
 
 	// If elem is not already a ByteLength type, write in packed form.
 	// This is a Proto wart due to Proto backwards compatibility issues.
@@ -379,8 +378,7 @@ func (cdc *Codec) encodeReflectBinaryStruct(w io.Writer, info *TypeInfo, rv refl
 
 	// Proto3 incurs a cost in writing non-root structs.
 	// Here we incur it for root structs as well for ease of dev.
-	buf := GetBuffer()
-	defer PutBuffer(buf)
+	buf := bytes.NewBuffer(nil)
 
 	switch info.Type {
 

@@ -719,8 +719,7 @@ func (cdc *Codec) addCheckConflictsWithConcrete_nolock(cinfo *TypeInfo) {
 // .String()
 
 func (ti TypeInfo) String() string {
-	buf := GetBuffer()
-	defer PutBuffer(buf)
+	buf := new(bytes.Buffer)
 	buf.Write([]byte("TypeInfo{"))
 	buf.Write([]byte(fmt.Sprintf("Type:%v,", ti.Type)))
 	if ti.Type.Kind() == reflect.Interface {
