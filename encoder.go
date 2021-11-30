@@ -42,6 +42,13 @@ func EncodeVarint(w io.Writer, i int64) (err error) {
 	return
 }
 
+func EncodeVarintToBuffer(w *bytes.Buffer, i int64) (err error) {
+	var buf [10]byte
+	n := binary.PutVarint(buf[:], i)
+	_, err = w.Write(buf[0:n])
+	return
+}
+
 func VarintSize(i int64) int {
 	return UvarintSize(uint64((uint64(i) << 1) ^ uint64(i>>63)))
 }
@@ -79,6 +86,13 @@ func EncodeUint64(w io.Writer, u uint64) (err error) {
 // `binary:"fixed32"`, `binary:"fixed64"`, or `binary:"zigzag32"` `binary:"zigzag64"` tags.
 // It matches protobufs varint encoding.
 func EncodeUvarint(w io.Writer, u uint64) (err error) {
+	var buf [10]byte
+	n := binary.PutUvarint(buf[:], u)
+	_, err = w.Write(buf[0:n])
+	return
+}
+
+func EncodeUvarintToBuffer(w *bytes.Buffer, u uint64) (err error) {
 	var buf [10]byte
 	n := binary.PutUvarint(buf[:], u)
 	_, err = w.Write(buf[0:n])
