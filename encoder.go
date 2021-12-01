@@ -228,3 +228,7 @@ func EncodeStringToBuffer(buf *bytes.Buffer, s string) (err error) {
 	_, err = buf.WriteString(s)
 	return
 }
+
+func EncodedStringSize(s string) int {
+	return UvarintSize(uint64(len(s))) + len(s)
+}
