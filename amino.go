@@ -149,7 +149,7 @@ func (cdc *Codec) MarshalBinaryLengthPrefixed(o interface{}) ([]byte, error) {
 	}
 
 	// Write uvarint(len(bz)).
-	err = EncodeUvarint(buf, uint64(len(bz)))
+	err = EncodeUvarintToBuffer(buf, uint64(len(bz)))
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +175,7 @@ func (cdc *Codec) MarshalBinaryLengthPrefixedWithRegisteredMarshaller(o interfac
 	}
 
 	// Write uvarint(len(bz)).
-	err = EncodeUvarint(buf, uint64(len(bz)))
+	err = EncodeUvarintToBuffer(buf, uint64(len(bz)))
 	if err != nil {
 		return nil, err
 	}
