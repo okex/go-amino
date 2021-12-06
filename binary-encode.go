@@ -225,7 +225,7 @@ func (cdc *Codec) encodeReflectBinaryInterface(w io.Writer, iinfo *TypeInfo, rv 
 	}
 
 	// Write actual concrete value.
-	err = cdc.encodeReflectBinary(buf, cinfo, crv, fopts, true)
+	err = cdc.encodeReflectBinaryToBuffer(buf, cinfo, crv, fopts, true)
 	if err != nil {
 		return
 	}
@@ -291,7 +291,7 @@ func (cdc *Codec) encodeReflectBinaryList(w io.Writer, info *TypeInfo, rv reflec
 			// Get dereferenced element value (or zero).
 			var erv, _, _ = derefPointersZero(rv.Index(i))
 			// Write the element value.
-			err = cdc.encodeReflectBinary(buf, einfo, erv, fopts, false)
+			err = cdc.encodeReflectBinaryToBuffer(buf, einfo, erv, fopts, false)
 			if err != nil {
 				return
 			}
@@ -303,7 +303,7 @@ func (cdc *Codec) encodeReflectBinaryList(w io.Writer, info *TypeInfo, rv reflec
 		// Write elems in unpacked form.
 		for i := 0; i < rv.Len(); i++ {
 			// Write elements as repeated fields of the parent struct.
-			err = encodeFieldNumberAndTyp3(buf, fopts.BinFieldNum, Typ3_ByteLength)
+			err = encodeFieldNumberAndTyp3ToBuffer(buf, fopts.BinFieldNum, Typ3_ByteLength)
 			if err != nil {
 				return
 			}
@@ -322,7 +322,7 @@ func (cdc *Codec) encodeReflectBinaryList(w io.Writer, info *TypeInfo, rv reflec
 					return errors.New("nil struct pointers not supported when empty_elements field tag is set")
 				}
 				// Nothing to encode, so the length is 0.
-				err = EncodeByte(buf, byte(0x00))
+				err = EncodeByteToBuffer(buf, byte(0x00))
 				if err != nil {
 					return
 				}
@@ -331,7 +331,7 @@ func (cdc *Codec) encodeReflectBinaryList(w io.Writer, info *TypeInfo, rv reflec
 				// In case of any inner lists in unpacked form.
 				efopts := fopts
 				efopts.BinFieldNum = 1
-				err = cdc.encodeReflectBinary(buf, einfo, erv, efopts, false)
+				err = cdc.encodeReflectBinaryToBuffer(buf, einfo, erv, efopts, false)
 				if err != nil {
 					return
 				}
@@ -384,7 +384,7 @@ func (cdc *Codec) encodeReflectBinaryStruct(w io.Writer, info *TypeInfo, rv refl
 
 	case timeType:
 		// Special case: time.Time
-		err = EncodeTime(buf, rv.Interface().(time.Time))
+		err = EncodeTimeToBuffer(buf, rv.Interface().(time.Time))
 		if err != nil {
 			return
 		}
@@ -408,21 +408,21 @@ func (cdc *Codec) encodeReflectBinaryStruct(w io.Writer, info *TypeInfo, rv refl
 			}
 			if field.UnpackedList {
 				// Write repeated field entries for each list item.
-				err = cdc.encodeReflectBinaryList(buf, finfo, dfrv, field.FieldOptions, true)
+				err = cdc.encodeReflectBinaryListToBuffer(buf, finfo, dfrv, field.FieldOptions, true)
 				if err != nil {
 					return
 				}
 			} else {
 				lBeforeKey := buf.Len()
 				// Write field key (number and type).
-				err = encodeFieldNumberAndTyp3(buf, field.BinFieldNum, typeToTyp3(finfo.Type, field.FieldOptions))
+				err = encodeFieldNumberAndTyp3ToBuffer(buf, field.BinFieldNum, typeToTyp3(finfo.Type, field.FieldOptions))
 				if err != nil {
 					return
 				}
 				lBeforeValue := buf.Len()
 
 				// Write field value from rv.
-				err = cdc.encodeReflectBinary(buf, finfo, dfrv, field.FieldOptions, false)
+				err = cdc.encodeReflectBinaryToBuffer(buf, finfo, dfrv, field.FieldOptions, false)
 				if err != nil {
 					return
 				}
