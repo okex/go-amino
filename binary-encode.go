@@ -469,3 +469,22 @@ func encodeFieldNumberAndTyp3(w io.Writer, num uint32, typ Typ3) (err error) {
 	_, err = w.Write(buf[0:n])
 	return
 }
+
+// Write field key.
+func encodeFieldNumberAndTyp3ToBuffer(w *bytes.Buffer, num uint32, typ Typ3) (err error) {
+	if (typ & 0xF8) != 0 {
+		panic(fmt.Sprintf("invalid Typ3 byte %v", typ))
+	}
+	if num < 0 || num > (1<<29-1) {
+		panic(fmt.Sprintf("invalid field number %v", num))
+	}
+
+	// Pack Typ3 and field number.
+	var value64 = (uint64(num) << 3) | uint64(typ)
+
+	// Write uvarint value for field and Typ3.
+	var buf [10]byte
+	n := binary.PutUvarint(buf[:], value64)
+	_, err = w.Write(buf[0:n])
+	return
+}
