@@ -83,7 +83,7 @@ func encodeUvarint(w io.Writer, u uint64) error {
 }
 
 func BenchmarkEncodeUint(b *testing.B) {
-	b.Run("cosmos encodeUvarint", func(b *testing.B) {
+	b.Run("cosmos new encodeUvarint", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
 			buf := &bytes.Buffer{}
@@ -95,6 +95,13 @@ func BenchmarkEncodeUint(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			buf := &bytes.Buffer{}
 			_ = EncodeUvarintToBuffer(buf, uint64(i))
+		}
+	})
+	b.Run("encodeUvarint", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			buf := &bytes.Buffer{}
+			_ = EncodeUvarint(buf, uint64(i))
 		}
 	})
 }
