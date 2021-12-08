@@ -1,6 +1,10 @@
 package amino
 
 import (
+	"bytes"
+	"encoding/binary"
+	"io"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -58,4 +62,39 @@ func TestUvarintSize(t *testing.T) {
 			require.Equal(t, tt.want, UvarintSize(tt.u), "failed on tc %d", i)
 		})
 	}
+}
+
+var uvarintPool = &sync.Pool{
+	New: func() interface{} {
+		return &[binary.MaxVarintLen64]byte{}
+	},
+}
+
+func encodeUvarint(w io.Writer, u uint64) error {
+	// See comment in encodeVarint
+	buf := uvarintPool.Get().(*[binary.MaxVarintLen64]byte)
+
+	n := binary.PutUvarint(buf[:], u)
+	_, err := w.Write(buf[0:n])
+
+	uvarintPool.Put(buf)
+
+	return err
+}
+
+func BenchmarkEncodeUint(b *testing.B) {
+	b.Run("cosmos encodeUvarint", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			buf := &bytes.Buffer{}
+			_ = encodeUvarint(buf, uint64(i))
+		}
+	})
+	b.Run("encodeUvarint to buffer", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			buf := &bytes.Buffer{}
+			_ = EncodeUvarintToBuffer(buf, uint64(i))
+		}
+	})
 }
