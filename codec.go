@@ -3,6 +3,7 @@ package amino
 import (
 	"bytes"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"reflect"
@@ -149,6 +150,68 @@ func NewCodec() *Codec {
 		nameToTypeInfo:   make(map[string]*TypeInfo),
 	}
 	return cdc
+}
+
+// GetTypePrefix copy type prefix bytes of o into dst
+// len(dst) must >= 8
+// return (length of prefix, error)
+func (cdc *Codec) GetTypePrefix(o interface{}, dst []byte) (int, error) {
+	var rv, _, isNilPtr = derefPointers(reflect.ValueOf(o))
+	if isNilPtr {
+		return 0, errors.New("cannot parse a nil pointer directly.")
+	}
+
+	rt := rv.Type()
+	info, err := cdc.getTypeInfo_wlock(rt)
+	if err != nil {
+		return 0, err
+	}
+
+	if info.Type.Kind() == reflect.Interface {
+		var iinfo = info
+		if rv.IsNil() {
+			return 0, errors.New("cannot parse nil interface")
+		}
+		var crv, isPtr, isNilPtr = derefPointers(rv.Elem())
+		if isPtr && crv.Kind() == reflect.Interface {
+			return 0, errors.New("should not happen")
+		}
+		if isNilPtr {
+			return 0, errors.New("cannot parse nil interface")
+		}
+		var crt = crv.Type()
+
+		// Get *TypeInfo for concrete type.
+		var cinfo *TypeInfo
+		cinfo, err = cdc.getTypeInfo_wlock(crt)
+		if err != nil {
+			return 0, err
+		}
+		if !cinfo.Registered {
+			return 0, fmt.Errorf("Cannot encode unregistered concrete type %v.", crt)
+		}
+
+		var needDisamb = false
+
+		if iinfo.AlwaysDisambiguate {
+			needDisamb = true
+		} else if len(iinfo.Implementers[cinfo.Prefix]) > 1 {
+			needDisamb = true
+		}
+		if needDisamb {
+			dst[0] = 0
+			copy(dst[1:], cinfo.Disamb[:])
+			copy(dst[4:], iinfo.Prefix[:])
+			return 8, nil
+		} else {
+			copy(dst, cinfo.Prefix[:])
+			return 4, nil
+		}
+	} else if info.Registered {
+		copy(dst, info.Prefix[:])
+		return 4, nil
+	}
+	return 0, nil
 }
 
 // This function should be used to register all interfaces that will be
