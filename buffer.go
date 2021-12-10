@@ -47,3 +47,18 @@ func PutBuffer(b *Buffer) {
 	b.Reset()
 	bufferPool.Put(b)
 }
+
+func GetBytesBufferCopy(buf *bytes.Buffer) []byte {
+	if buf == nil {
+		return nil
+	}
+	bz := buf.Bytes()
+	length := len(bz)
+	if length == 0 {
+		return nil
+	} else {
+		ret := make([]byte, length)
+		copy(ret, bz)
+		return ret
+	}
+}
