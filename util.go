@@ -3,6 +3,8 @@ package amino
 import (
 	"errors"
 	"fmt"
+	"reflect"
+	"unsafe"
 )
 
 // ParseProtoPosAndTypeMustOneByte Parse field number and type from one byte,
@@ -29,4 +31,26 @@ func EncodeProtoPosAndTypeMustOneByte(pos int, typ Typ3) (byte, error) {
 	data <<= 3
 	data |= byte(typ)
 	return data, nil
+}
+
+// StrToBytes is meant to make a zero allocation conversion
+// from string -> []byte to speed up operations, it is not meant
+// to be used generally
+func StrToBytes(s string) []byte {
+	stringHeader := (*reflect.StringHeader)(unsafe.Pointer(&s))
+	var b []byte
+	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&b))
+	hdr.Cap = stringHeader.Len
+	hdr.Len = stringHeader.Len
+	hdr.Data = stringHeader.Data
+	return b
+}
+
+// BytesToStr is meant to make a zero allocation conversion
+// from []byte -> string to speed up operations, it is not meant
+// to be used generally, but for a specific pattern to delete keys
+// from a map.
+func BytesToStr(b []byte) string {
+	hdr := (*reflect.StringHeader)(unsafe.Pointer(&b))
+	return *(*string)(unsafe.Pointer(hdr))
 }
