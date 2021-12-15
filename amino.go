@@ -243,17 +243,21 @@ func (cdc *Codec) MarshalBinaryBare(o interface{}) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = cdc.encodeReflectBinary(buf, info, rv, FieldOptions{BinFieldNum: 1}, true)
-	if err != nil {
-		return nil, err
-	}
-	bz = buf.Bytes()
 
 	// If registered concrete, prepend prefix bytes.
 	if info.Registered {
 		pb := info.Prefix.Bytes()
-		bz = append(pb, bz...)
+		_, err = buf.Write(pb)
+		if err != nil {
+			return nil, err
+		}
 	}
+
+	err = cdc.encodeReflectBinaryToBuffer(buf, info, rv, FieldOptions{BinFieldNum: 1}, true)
+	if err != nil {
+		return nil, err
+	}
+	bz = buf.Bytes()
 
 	return bz, nil
 }
