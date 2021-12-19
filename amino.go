@@ -149,7 +149,7 @@ func (cdc *Codec) MarshalBinaryLengthPrefixed(o interface{}) ([]byte, error) {
 	}
 
 	// Write uvarint(len(bz)).
-	err = EncodeUvarint(buf, uint64(len(bz)))
+	err = EncodeUvarintToBuffer(buf, uint64(len(bz)))
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +175,7 @@ func (cdc *Codec) MarshalBinaryLengthPrefixedWithRegisteredMarshaller(o interfac
 	}
 
 	// Write uvarint(len(bz)).
-	err = EncodeUvarint(buf, uint64(len(bz)))
+	err = EncodeUvarintToBuffer(buf, uint64(len(bz)))
 	if err != nil {
 		return nil, err
 	}
@@ -243,19 +243,53 @@ func (cdc *Codec) MarshalBinaryBare(o interface{}) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = cdc.encodeReflectBinary(buf, info, rv, FieldOptions{BinFieldNum: 1}, true)
+
+	// If registered concrete, prepend prefix bytes.
+	if info.Registered {
+		pb := info.Prefix.Bytes()
+		_, err = buf.Write(pb)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	err = cdc.encodeReflectBinaryToBuffer(buf, info, rv, FieldOptions{BinFieldNum: 1}, true)
 	if err != nil {
 		return nil, err
 	}
 	bz = buf.Bytes()
 
-	// If registered concrete, prepend prefix bytes.
-	if info.Registered {
-		pb := info.Prefix.Bytes()
-		bz = append(pb, bz...)
+	return bz, nil
+}
+
+func (cdc *Codec) MarshalBinaryBareToWriter(writer io.Writer, o interface{}) error {
+
+	// Dereference value if pointer.
+	var rv, _, isNilPtr = derefPointers(reflect.ValueOf(o))
+	if isNilPtr {
+		// NOTE: You can still do so by calling
+		// `.MarshalBinaryLengthPrefixed(struct{ *SomeType })` or so on.
+		panic("MarshalBinaryBare cannot marshal a nil pointer directly. Try wrapping in a struct?")
 	}
 
-	return bz, nil
+	rt := rv.Type()
+	info, err := cdc.getTypeInfo_wlock(rt)
+	if err != nil {
+		return err
+	}
+	if info.Registered {
+		_, err = writer.Write(info.Prefix.Bytes())
+		if err != nil {
+			return nil
+		}
+	}
+
+	err = cdc.encodeReflectBinary(writer, info, rv, FieldOptions{BinFieldNum: 1}, true)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Panics if error.
@@ -265,6 +299,13 @@ func (cdc *Codec) MustMarshalBinaryBare(o interface{}) []byte {
 		panic(err)
 	}
 	return bz
+}
+
+func (cdc *Codec) MustMarshalBinaryBareToWriter(writer io.Writer, o interface{}) {
+	err := cdc.MarshalBinaryBareToWriter(writer, o)
+	if err != nil {
+		panic(err)
+	}
 }
 
 // Like UnmarshalBinaryBare, but will first decode the byte-length prefix.
