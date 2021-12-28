@@ -8,7 +8,7 @@ func DecodeIntFromUvarint(bz []byte) (i int, n int, err error) {
 	if err != nil {
 		return
 	}
-	if num > math.MaxInt {
+	if int(num) > math.MaxInt || int(num) < math.MinInt {
 		err = ErrOverflowInt
 		return
 	}
