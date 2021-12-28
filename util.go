@@ -1,6 +1,7 @@
 package amino
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"reflect"
@@ -53,4 +54,24 @@ func StrToBytes(s string) []byte {
 func BytesToStr(b []byte) string {
 	hdr := (*reflect.StringHeader)(unsafe.Pointer(&b))
 	return *(*string)(unsafe.Pointer(hdr))
+}
+
+func GetBinaryBareFromBinaryLengthPrefixed(bz []byte) ([]byte, error) {
+	if len(bz) == 0 {
+		return nil, errors.New("cannot be empty bytes")
+	}
+
+	// Read byte-length prefix.
+	u64, n := binary.Uvarint(bz)
+	if n < 0 {
+		return nil, fmt.Errorf("Error reading msg byte-length prefix: got code %v", n)
+	}
+	if u64 > uint64(len(bz)-n) {
+		return nil, fmt.Errorf("Not enough bytes to read, want %v more bytes but only have %v",
+			u64, len(bz)-n)
+	} else if u64 < uint64(len(bz)-n) {
+		return nil, fmt.Errorf("Bytes left over, should read %v more bytes but have %v",
+			u64, len(bz)-n)
+	}
+	return bz[n:], nil
 }
