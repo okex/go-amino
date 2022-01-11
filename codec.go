@@ -32,6 +32,14 @@ type (
 type ConcreteMarshaller func(*Codec, interface{}) ([]byte, error)
 type ConcreteUnmarshaller func(*Codec, []byte) (interface{}, int, error)
 
+type Marshaller interface {
+	MarshalToAmino(*Codec) ([]byte, error)
+}
+
+type Unmarshaller interface {
+	UnmarshalFromAmino(*Codec, []byte) error
+}
+
 // Copy into PrefixBytes
 func NewPrefixBytes(prefixBytes []byte) PrefixBytes {
 	pb := PrefixBytes{}
