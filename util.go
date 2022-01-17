@@ -4,7 +4,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math/big"
 	"reflect"
+	"strconv"
 	"unsafe"
 )
 
@@ -74,4 +76,21 @@ func GetBinaryBareFromBinaryLengthPrefixed(bz []byte) ([]byte, error) {
 			u64, len(bz)-n)
 	}
 	return bz[n:], nil
+}
+
+func UnmarshalBigIntBase10(bz []byte) (*big.Int, error) {
+	ret := new(big.Int)
+	if len(bz) < 19 {
+		i, err := strconv.ParseInt(BytesToStr(bz), 10, 0)
+		if err == nil {
+			ret.SetInt64(i)
+			return ret, nil
+		}
+	}
+
+	err := ret.UnmarshalText(bz)
+	if err != nil {
+		return nil, err
+	}
+	return ret, nil
 }
