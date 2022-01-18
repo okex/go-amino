@@ -2,6 +2,7 @@ package amino
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -93,4 +94,10 @@ func UnmarshalBigIntBase10(bz []byte) (*big.Int, error) {
 		return nil, err
 	}
 	return ret, nil
+}
+
+func HexEncodeToString(src []byte) string {
+	dst := make([]byte, hex.EncodedLen(len(src)))
+	hex.Encode(dst, src)
+	return BytesToStr(dst)
 }
