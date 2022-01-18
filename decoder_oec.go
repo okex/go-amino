@@ -19,6 +19,11 @@ func DecodeInt(bz []byte) (i int, n int, err error) {
 	return
 }
 
+// Deprecated: use DecodeInt
+func DecodeIntFromUvarint(bz []byte) (i int, n int, err error) {
+	return DecodeInt(bz)
+}
+
 func DecodeByteSliceWithoutCopy(source *[]byte) ([]byte, error) {
 	bz := *source
 	count, _n, err := DecodeUvarint(bz)
