@@ -1,8 +1,10 @@
 package amino
 
 import (
+	"encoding/hex"
 	"math"
 	"math/big"
+	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -81,4 +83,24 @@ func TestUnmarshalBigIntBase10(t *testing.T) {
 		_, err = UnmarshalBigIntBase10(str)
 		require.Error(t, err)
 	}
+}
+
+func BenchmarkHexEncodeToString(b *testing.B) {
+	var buf = make([]byte, 512)
+	rand.Read(buf)
+	b.ResetTimer()
+
+	b.Run("hex", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			_ = hex.EncodeToString(buf)
+		}
+	})
+
+	b.Run("amino", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			_ = HexEncodeToString(buf)
+		}
+	})
 }
