@@ -17,3 +17,12 @@ func EncodeByteSliceWithKeyToBuffer(w *bytes.Buffer, bz []byte, key ...byte) err
 	}
 	return EncodeByteSliceToBuffer(w, bz)
 }
+
+func EncodeStringWithKeyToBuffer(w *bytes.Buffer, s string, key ...byte) (err error) {
+	_, err = w.Write(key)
+	if err != nil {
+		return
+	}
+	err = EncodeStringToBuffer(w, s)
+	return
+}
