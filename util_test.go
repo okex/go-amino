@@ -97,10 +97,17 @@ func BenchmarkHexEncodeToString(b *testing.B) {
 		}
 	})
 
-	b.Run("amino", func(b *testing.B) {
+	b.Run("amino hex", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
 			_ = HexEncodeToString(buf)
+		}
+	})
+
+	b.Run("string", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			_ = string(buf)
 		}
 	})
 }
