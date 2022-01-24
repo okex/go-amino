@@ -35,3 +35,11 @@ func EncodeUvarintWithKeyToBuffer(w *bytes.Buffer, u uint64, key ...byte) (err e
 	err = EncodeUvarintToBuffer(w, u)
 	return
 }
+
+func EncodeBoolWithKeyToBuffer(w *bytes.Buffer, b bool, key ...byte) error {
+	_, err := w.Write(key)
+	if err != nil {
+		return err
+	}
+	return EncodeBoolToBuffer(w, b)
+}
