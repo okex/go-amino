@@ -126,7 +126,7 @@ func TestEncodedTimeSize(t *testing.T) {
 		err := EncodeTimeToBuffer(buf, ti)
 		require.NoError(t, err)
 
-		require.Equal(t, buf.Len(), EncodedTimeSize(ti))
+		require.Equal(t, buf.Len(), TimeSize(ti))
 
 		buf.Reset()
 	}

@@ -103,7 +103,7 @@ func HexEncodeToString(src []byte) string {
 	return BytesToStr(dst)
 }
 
-func EncodedTimeSize(t time.Time) int {
+func TimeSize(t time.Time) int {
 	var size = 0
 	s := t.Unix()
 	// skip if default/zero value:
