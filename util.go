@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"reflect"
 	"strconv"
+	"time"
 	"unsafe"
 )
 
@@ -100,4 +101,21 @@ func HexEncodeToString(src []byte) string {
 	dst := make([]byte, hex.EncodedLen(len(src)))
 	hex.Encode(dst, src)
 	return BytesToStr(dst)
+}
+
+func EncodedTimeSize(t time.Time) int {
+	var size = 0
+	s := t.Unix()
+	// skip if default/zero value:
+	if s != 0 {
+		size += 1 + UvarintSize(uint64(s))
+	}
+	ns := int32(t.Nanosecond()) // this int64 -> int32 cast is safe (nanos are in [0, 999999999])
+	// skip if default/zero value:
+	if ns != 0 {
+		// do not encode if nanos exceed allowed interval
+		size += 1 + UvarintSize(uint64(ns))
+	}
+
+	return size
 }

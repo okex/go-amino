@@ -1,11 +1,13 @@
 package amino
 
 import (
+	"bytes"
 	"encoding/hex"
 	"math"
 	"math/big"
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -110,4 +112,22 @@ func BenchmarkHexEncodeToString(b *testing.B) {
 			_ = string(buf)
 		}
 	})
+}
+
+func TestEncodedTimeSize(t *testing.T) {
+	testCases := []time.Time{
+		time.Now(),
+		time.Unix(0, 0),
+	}
+
+	buf := &bytes.Buffer{}
+
+	for _, ti := range testCases {
+		err := EncodeTimeToBuffer(buf, ti)
+		require.NoError(t, err)
+
+		require.Equal(t, buf.Len(), EncodedTimeSize(ti))
+
+		buf.Reset()
+	}
 }
