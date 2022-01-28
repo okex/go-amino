@@ -2,9 +2,13 @@ package amino
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/big"
 	"reflect"
+	"strconv"
+	"time"
 	"unsafe"
 )
 
@@ -74,4 +78,44 @@ func GetBinaryBareFromBinaryLengthPrefixed(bz []byte) ([]byte, error) {
 			u64, len(bz)-n)
 	}
 	return bz[n:], nil
+}
+
+func UnmarshalBigIntBase10(bz []byte) (*big.Int, error) {
+	ret := new(big.Int)
+	if len(bz) < 19 {
+		i, err := strconv.ParseInt(BytesToStr(bz), 10, 0)
+		if err == nil {
+			ret.SetInt64(i)
+			return ret, nil
+		}
+	}
+
+	err := ret.UnmarshalText(bz)
+	if err != nil {
+		return nil, err
+	}
+	return ret, nil
+}
+
+func HexEncodeToString(src []byte) string {
+	dst := make([]byte, hex.EncodedLen(len(src)))
+	hex.Encode(dst, src)
+	return BytesToStr(dst)
+}
+
+func TimeSize(t time.Time) int {
+	var size = 0
+	s := t.Unix()
+	// skip if default/zero value:
+	if s != 0 {
+		size += 1 + UvarintSize(uint64(s))
+	}
+	ns := int32(t.Nanosecond()) // this int64 -> int32 cast is safe (nanos are in [0, 999999999])
+	// skip if default/zero value:
+	if ns != 0 {
+		// do not encode if nanos exceed allowed interval
+		size += 1 + UvarintSize(uint64(ns))
+	}
+
+	return size
 }
