@@ -40,6 +40,10 @@ type Unmarshaller interface {
 	UnmarshalFromAmino(*Codec, []byte) error
 }
 
+type Sizer interface {
+	AminoSize(*Codec) int
+}
+
 // Copy into PrefixBytes
 func NewPrefixBytes(prefixBytes []byte) PrefixBytes {
 	pb := PrefixBytes{}
