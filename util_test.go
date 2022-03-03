@@ -89,14 +89,17 @@ func TestUnmarshalBigIntBase10(t *testing.T) {
 
 func TestMarshalBigIntToText(t *testing.T) {
 	testCases := []*big.Int{
+		(*big.Int)(nil),
 		big.NewInt(0),
 		big.NewInt(1),
 		big.NewInt(-1),
+		big.NewInt(-100000),
+		big.NewInt(99999999),
 		big.NewInt(math.MaxInt64),
 		big.NewInt(math.MinInt64),
 		big.NewInt(math.MaxInt64).Add(big.NewInt(math.MaxInt64), big.NewInt(1)),
-		big.NewInt(math.MaxInt64).Add(big.NewInt(math.MaxInt64), big.NewInt(1)),
 		big.NewInt(math.MaxInt64).Mul(big.NewInt(math.MaxInt64), big.NewInt(math.MinInt64)),
+		big.NewInt(math.MaxInt64).Mul(big.NewInt(math.MaxInt64), big.NewInt(math.MaxInt64)),
 		big.NewInt(math.MinInt64).Sub(big.NewInt(math.MinInt64), big.NewInt(1)),
 	}
 	for _, i := range testCases {
@@ -108,6 +111,8 @@ func TestMarshalBigIntToText(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t, BytesToStr(str), str2)
+
+		require.Equal(t, len(str), CalcBigIntTextSize(bi))
 	}
 }
 
@@ -181,4 +186,64 @@ func TestEncodedTimeSize(t *testing.T) {
 
 		buf.Reset()
 	}
+}
+
+func BenchmarkBigIntNums(b *testing.B) {
+	smallBigInt := big.NewInt(math.MaxInt64)
+	b.Run("small", func(b *testing.B) {
+		d := smallBigInt
+		b.Run("marshal", func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				_, _ = d.MarshalText()
+			}
+		})
+		b.Run("calc", func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				CalcBigIntTextSize(d)
+			}
+		})
+		expect, _ := d.MarshalText()
+		require.Equal(b, len(expect), CalcBigIntTextSize(d))
+	})
+	mediumBigInt := big.NewInt(1).Mul(new(big.Int).SetUint64(10000000000000000000), big.NewInt(50000))
+	b.Run("medium", func(b *testing.B) {
+		d := mediumBigInt
+		b.Run("marshal", func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				_, _ = d.MarshalText()
+			}
+
+		})
+		b.Run("calc", func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				CalcBigIntTextSize(d)
+			}
+		})
+		expect, _ := d.MarshalText()
+		require.Equal(b, len(expect), CalcBigIntTextSize(d))
+	})
+	bigBigInt := big.NewInt(1).Mul(new(big.Int).SetUint64(math.MaxUint64), new(big.Int).SetUint64(math.MaxUint64))
+	bigBigInt = bigBigInt.Mul(bigBigInt, bigBigInt)
+	b.Run("big", func(b *testing.B) {
+		d := bigBigInt
+		b.Run("marshal", func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				_, _ = d.MarshalText()
+			}
+
+		})
+		b.Run("calc", func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				CalcBigIntTextSize(d)
+			}
+		})
+		expect, _ := d.MarshalText()
+		require.Equal(b, len(expect), CalcBigIntTextSize(d))
+	})
 }

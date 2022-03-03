@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"reflect"
 	"strconv"
+	"sync"
 	"time"
 	"unsafe"
 )
@@ -156,4 +157,68 @@ func TimeSize(t time.Time) int {
 	}
 
 	return size
+}
+
+func calcUintNum(n uint64) int {
+	c := 1
+	n1 := n
+
+	for ; n1 >= 100; n = n1 {
+		n1 = n / 100
+		c += 2
+	}
+	if n1 >= 10 {
+		c++
+	}
+	return c
+}
+
+var divisor = new(big.Int).SetUint64(10000000000000000000)
+
+var bigIntPool = &sync.Pool{
+	New: func() interface{} {
+		return new(big.Int)
+	},
+}
+
+func CalcBigIntTextSize(bi *big.Int) int {
+	if bi == nil {
+		return 5 // "<nil>"
+	}
+	si := bi.Sign()
+	words := bi.Bits()
+
+	if si == 0 {
+		return 1 // "0"
+	}
+
+	signCount := 0
+	if si < 0 {
+		signCount = 1
+	}
+
+	var num uint64
+
+	if is64Bit && len(words) == 1 {
+		num = uint64(words[0])
+	} else if !is64Bit && len(words) < 3 {
+		num = bi.Uint64()
+	} else {
+		wordCountOfUint64 := 1
+		if !is64Bit {
+			wordCountOfUint64 = 2
+		}
+		bi2 := bigIntPool.Get().(*big.Int).Set(bi)
+
+		c := 0
+		for len(bi2.Bits()) > wordCountOfUint64 {
+			bi2.Div(bi2, divisor)
+			c += 1
+		}
+		c = calcUintNum(bi2.Uint64()) + c*19 + signCount
+		bigIntPool.Put(bi2)
+		return c
+	}
+
+	return calcUintNum(num) + signCount
 }
