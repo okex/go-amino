@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 	"reflect"
 	"strconv"
@@ -80,6 +81,8 @@ func GetBinaryBareFromBinaryLengthPrefixed(bz []byte) ([]byte, error) {
 	return bz[n:], nil
 }
 
+const is64Bit = strconv.IntSize == 64
+
 func UnmarshalBigIntBase10(bz []byte) (*big.Int, error) {
 	ret := new(big.Int)
 	if len(bz) < 19 {
@@ -95,6 +98,41 @@ func UnmarshalBigIntBase10(bz []byte) (*big.Int, error) {
 		return nil, err
 	}
 	return ret, nil
+}
+
+func MarshalBigIntToText(bi *big.Int) (string, error) {
+	if bi == nil {
+		// copy from big.Int.MarshalText
+		return "<nil>", nil
+	}
+	si := bi.Sign()
+	words := bi.Bits()
+
+	if si == 0 {
+		return "0", nil
+	}
+
+	var num uint64
+
+	if is64Bit && len(words) == 1 {
+		num = uint64(words[0])
+	} else if !is64Bit && len(words) < 3 {
+		num = bi.Uint64()
+	} else {
+		t, err := bi.MarshalText()
+		return BytesToStr(t), err
+	}
+
+	if si > 0 {
+		return strconv.FormatUint(num, 10), nil
+	} else {
+		if num <= uint64(math.MaxInt64)+1 {
+			return strconv.FormatInt(-int64(num), 10), nil
+		}
+	}
+
+	t, err := bi.MarshalText()
+	return BytesToStr(t), err
 }
 
 func HexEncodeToString(src []byte) string {
