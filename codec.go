@@ -44,6 +44,11 @@ type Sizer interface {
 	AminoSize(*Codec) int
 }
 
+type MarshalBufferSizer interface {
+	MarshalAminoTo(*Codec, *bytes.Buffer) error
+	Sizer
+}
+
 // Copy into PrefixBytes
 func NewPrefixBytes(prefixBytes []byte) PrefixBytes {
 	pb := PrefixBytes{}
