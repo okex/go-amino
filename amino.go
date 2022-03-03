@@ -524,7 +524,7 @@ func (cdc *Codec) MarshalBinaryBareWithSizer(o MarshalBufferSizer) ([]byte, erro
 	}
 
 	var buf bytes.Buffer
-	buf.Grow(o.AminoSize(cdc))
+	osize := o.AminoSize(cdc)
 
 	if info.Type.Kind() == reflect.Interface {
 		var iinfo = info
@@ -559,10 +559,13 @@ func (cdc *Codec) MarshalBinaryBareWithSizer(o MarshalBufferSizer) ([]byte, erro
 			needDisamb = true
 		}
 		if needDisamb {
+			buf.Grow(8 + osize)
 			_, err = buf.Write(append([]byte{0x00}, cinfo.Disamb[:]...))
 			if err != nil {
 				return nil, err
 			}
+		} else {
+			buf.Grow(4 + osize)
 		}
 
 		// Write prefix bytes.
@@ -571,10 +574,13 @@ func (cdc *Codec) MarshalBinaryBareWithSizer(o MarshalBufferSizer) ([]byte, erro
 			return nil, err
 		}
 	} else if info.Registered {
+		buf.Grow(4 + osize)
 		_, err = buf.Write(info.Prefix.Bytes())
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		buf.Grow(osize)
 	}
 
 	err = o.MarshalAminoTo(cdc, &buf)
