@@ -95,6 +95,7 @@ func TestMarshalBigIntToText(t *testing.T) {
 		big.NewInt(-1),
 		big.NewInt(-100000),
 		big.NewInt(99999999),
+		new(big.Int).Add(new(big.Int).Mul(big.NewInt(-999999999999999), big.NewInt(100000000000)), big.NewInt(-99999999999)),
 		big.NewInt(math.MaxInt64),
 		big.NewInt(math.MinInt64),
 		big.NewInt(math.MaxInt64).Add(big.NewInt(math.MaxInt64), big.NewInt(1)),
