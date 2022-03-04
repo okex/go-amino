@@ -175,9 +175,13 @@ func calcUintNum(n uint64) int {
 
 var divisor = new(big.Int).SetUint64(10000000000000000000)
 
+type twoBigInts struct {
+	A, B big.Int
+}
+
 var bigIntPool = &sync.Pool{
 	New: func() interface{} {
-		return new(big.Int)
+		return new(twoBigInts)
 	},
 }
 
@@ -208,15 +212,16 @@ func CalcBigIntTextSize(bi *big.Int) int {
 		if !is64Bit {
 			wordCountOfUint64 = 2
 		}
-		bi2 := bigIntPool.Get().(*big.Int).Set(bi)
+		twoBi := bigIntPool.Get().(*twoBigInts)
+		bi2 := twoBi.A.Set(bi)
 
 		c := 0
 		for len(bi2.Bits()) > wordCountOfUint64 {
-			bi2.Div(bi2, divisor)
+			bi2.QuoRem(bi2, divisor, &twoBi.B)
 			c += 1
 		}
 		c = calcUintNum(bi2.Uint64()) + c*19 + signCount
-		bigIntPool.Put(bi2)
+		bigIntPool.Put(twoBi)
 		return c
 	}
 
