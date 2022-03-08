@@ -5,9 +5,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 	"reflect"
 	"strconv"
+	"sync"
 	"time"
 	"unsafe"
 )
@@ -80,6 +82,8 @@ func GetBinaryBareFromBinaryLengthPrefixed(bz []byte) ([]byte, error) {
 	return bz[n:], nil
 }
 
+const is64Bit = strconv.IntSize == 64
+
 func UnmarshalBigIntBase10(bz []byte) (*big.Int, error) {
 	ret := new(big.Int)
 	if len(bz) < 19 {
@@ -95,6 +99,41 @@ func UnmarshalBigIntBase10(bz []byte) (*big.Int, error) {
 		return nil, err
 	}
 	return ret, nil
+}
+
+func MarshalBigIntToText(bi *big.Int) (string, error) {
+	if bi == nil {
+		// copy from big.Int.MarshalText
+		return "<nil>", nil
+	}
+	si := bi.Sign()
+	words := bi.Bits()
+
+	if si == 0 {
+		return "0", nil
+	}
+
+	var num uint64
+
+	if is64Bit && len(words) == 1 {
+		num = uint64(words[0])
+	} else if !is64Bit && len(words) < 3 {
+		num = bi.Uint64()
+	} else {
+		t, err := bi.MarshalText()
+		return BytesToStr(t), err
+	}
+
+	if si > 0 {
+		return strconv.FormatUint(num, 10), nil
+	} else {
+		if num <= uint64(math.MaxInt64)+1 {
+			return strconv.FormatInt(-int64(num), 10), nil
+		}
+	}
+
+	t, err := bi.MarshalText()
+	return BytesToStr(t), err
 }
 
 func HexEncodeToString(src []byte) string {
@@ -118,4 +157,73 @@ func TimeSize(t time.Time) int {
 	}
 
 	return size
+}
+
+func calcUintNum(n uint64) int {
+	c := 1
+	n1 := n
+
+	for ; n1 >= 100; n = n1 {
+		n1 = n / 100
+		c += 2
+	}
+	if n1 >= 10 {
+		c++
+	}
+	return c
+}
+
+var divisor = new(big.Int).SetUint64(10000000000000000000)
+
+type twoBigInts struct {
+	A, B big.Int
+}
+
+var bigIntPool = &sync.Pool{
+	New: func() interface{} {
+		return new(twoBigInts)
+	},
+}
+
+func CalcBigIntTextSize(bi *big.Int) int {
+	if bi == nil {
+		return 5 // "<nil>"
+	}
+	si := bi.Sign()
+	words := bi.Bits()
+
+	if si == 0 {
+		return 1 // "0"
+	}
+
+	signCount := 0
+	if si < 0 {
+		signCount = 1
+	}
+
+	var num uint64
+
+	if is64Bit && len(words) == 1 {
+		num = uint64(words[0])
+	} else if !is64Bit && len(words) < 3 {
+		num = bi.Uint64()
+	} else {
+		wordCountOfUint64 := 1
+		if !is64Bit {
+			wordCountOfUint64 = 2
+		}
+		twoBi := bigIntPool.Get().(*twoBigInts)
+		bi2 := twoBi.A.Set(bi)
+
+		c := 0
+		for len(bi2.Bits()) > wordCountOfUint64 {
+			bi2.QuoRem(bi2, divisor, &twoBi.B)
+			c += 1
+		}
+		c = calcUintNum(bi2.Uint64()) + c*19 + signCount
+		bigIntPool.Put(twoBi)
+		return c
+	}
+
+	return calcUintNum(num) + signCount
 }

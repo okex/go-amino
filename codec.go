@@ -44,6 +44,11 @@ type Sizer interface {
 	AminoSize(*Codec) int
 }
 
+type MarshalBufferSizer interface {
+	MarshalAminoTo(*Codec, *bytes.Buffer) error
+	Sizer
+}
+
 // Copy into PrefixBytes
 func NewPrefixBytes(prefixBytes []byte) PrefixBytes {
 	pb := PrefixBytes{}
@@ -478,25 +483,29 @@ func (cdc *Codec) getTypeInfo_wlock(rt reflect.Type) (info *TypeInfo, err error)
 	// We do not use defer cdc.mtx.Unlock() here due to performance overhead of
 	// defer in go1.11 (and prior versions). Ensure new code paths unlock the
 	// mutex.
-	cdc.mtx.Lock() // requires wlock because we might set.
 
 	// Dereference pointer type.
 	for rt.Kind() == reflect.Ptr {
 		rt = rt.Elem()
 	}
 
+	cdc.mtx.RLock()
 	info, ok := cdc.typeInfos[rt]
+	cdc.mtx.RUnlock()
+
 	if !ok {
 		if rt.Kind() == reflect.Interface {
 			err = fmt.Errorf("Unregistered interface %v", rt)
-			cdc.mtx.Unlock()
 			return
 		}
-
-		info = cdc.newTypeInfoUnregistered(rt)
-		cdc.setTypeInfo_nolock(info)
+		cdc.mtx.Lock()
+		info, ok = cdc.typeInfos[rt]
+		if !ok {
+			info = cdc.newTypeInfoUnregistered(rt)
+			cdc.setTypeInfo_nolock(info)
+		}
+		cdc.mtx.Unlock()
 	}
-	cdc.mtx.Unlock()
 	return info, nil
 }
 
