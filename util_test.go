@@ -6,6 +6,7 @@ import (
 	"math"
 	"math/big"
 	"math/rand"
+	"strings"
 	"testing"
 	"time"
 
@@ -247,4 +248,12 @@ func BenchmarkBigIntNums(b *testing.B) {
 		expect, _ := d.MarshalText()
 		require.Equal(b, len(expect), CalcBigIntTextSize(d))
 	})
+}
+
+func TestHexEncodeToStringUpper(t *testing.T) {
+	var bz = make([]byte, 256)
+	for i := 0; i < 10; i++ {
+		rand.Read(bz)
+		require.Equal(t, strings.ToUpper(hex.EncodeToString(bz)), HexEncodeToStringUpper(bz))
+	}
 }

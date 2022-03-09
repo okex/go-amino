@@ -58,8 +58,7 @@ func StrToBytes(s string) []byte {
 // to be used generally, but for a specific pattern to delete keys
 // from a map.
 func BytesToStr(b []byte) string {
-	hdr := (*reflect.StringHeader)(unsafe.Pointer(&b))
-	return *(*string)(unsafe.Pointer(hdr))
+	return *(*string)(unsafe.Pointer(&b))
 }
 
 func GetBinaryBareFromBinaryLengthPrefixed(bz []byte) ([]byte, error) {
@@ -139,6 +138,19 @@ func MarshalBigIntToText(bi *big.Int) (string, error) {
 func HexEncodeToString(src []byte) string {
 	dst := make([]byte, hex.EncodedLen(len(src)))
 	hex.Encode(dst, src)
+	return BytesToStr(dst)
+}
+
+const hextableUpper = "0123456789ABCDEF"
+
+func HexEncodeToStringUpper(src []byte) string {
+	dst := make([]byte, hex.EncodedLen(len(src)))
+	j := 0
+	for _, v := range src {
+		dst[j] = hextableUpper[v>>4]
+		dst[j+1] = hextableUpper[v&0x0f]
+		j += 2
+	}
 	return BytesToStr(dst)
 }
 
