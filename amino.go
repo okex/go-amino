@@ -438,7 +438,8 @@ func (cdc *Codec) MarshalBinaryBareWithRegisteredMarshaller(o interface{}) ([]by
 	}
 
 	var typeName string
-	var buf bytes.Buffer
+	var buf = marshalBytesPool.Get()
+	defer marshalBytesPool.Put(buf)
 
 	if info.Type.Kind() == reflect.Interface {
 		var iinfo = info
@@ -473,36 +474,25 @@ func (cdc *Codec) MarshalBinaryBareWithRegisteredMarshaller(o interface{}) ([]by
 			needDisamb = true
 		}
 		if needDisamb {
-			_, err = buf.Write(append([]byte{0x00}, cinfo.Disamb[:]...))
-			if err != nil {
-				return nil, err
-			}
+			buf.WriteByte(0x00)
+			buf.Write(cinfo.Disamb[:])
 		}
 
 		// Write prefix bytes.
-		_, err = buf.Write(cinfo.Prefix.Bytes())
-		if err != nil {
-			return nil, err
-		}
+		buf.Write(cinfo.Prefix.Bytes())
 		typeName = cinfo.Name
 	} else if info.Registered {
 		typeName = info.Name
-		_, err = buf.Write(info.Prefix.Bytes())
-		if err != nil {
-			return nil, err
-		}
+		buf.Write(info.Prefix.Bytes())
 	}
 
-	if marshaller, ok := cdc.nameToConcreteMarshaller.Load(typeName); ok {
-		bz, err := marshaller.(ConcreteMarshaller)(cdc, o)
+	if marshaller, ok := cdc.getMarshaler(typeName); ok {
+		bz, err := marshaller(cdc, o)
 		if err != nil {
 			return nil, err
 		}
-		_, err = buf.Write(bz)
-		if err != nil {
-			return nil, err
-		}
-		return buf.Bytes(), nil
+		buf.Write(bz)
+		return GetBytesBufferCopy(buf), nil
 	} else {
 		return nil, fmt.Errorf("can't find unmarshaller")
 	}
@@ -554,9 +544,9 @@ func (cdc *Codec) UnmarshalBinaryBareWithRegisteredUnmarshaller(bz []byte, ptr i
 		typeName = cinfo.Name
 	}
 
-	if customUnmarshaller, ok := cdc.nameToConcreteUnmarshaller.Load(typeName); ok {
+	if customUnmarshaller, ok := cdc.getUnmarshaler(typeName); ok {
 		bz = bz[typeBytesLen:]
-		v, _, err := customUnmarshaller.(ConcreteUnmarshaller)(cdc, bz)
+		v, _, err := customUnmarshaller(cdc, bz)
 		if err != nil {
 			return nil, err
 		}
