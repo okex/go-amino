@@ -172,9 +172,6 @@ func NewCodec() *Codec {
 		typeInfos:        make(map[reflect.Type]*TypeInfo),
 		disfixToTypeInfo: make(map[DisfixBytes]*TypeInfo),
 		nameToTypeInfo:   make(map[string]*TypeInfo),
-
-		nameToConcreteUnmarshaller: make(map[string]ConcreteUnmarshaller),
-		nameToConcreteMarshaller:   make(map[string]ConcreteMarshaller),
 	}
 	return cdc
 }
