@@ -22,10 +22,6 @@ const (
 	DisfixBytesLen = PrefixBytesLen + DisambBytesLen
 )
 
-var (
-	marshalBytesPool = NewBufferPool()
-)
-
 // Prefix types
 type (
 	PrefixBytes [PrefixBytesLen]byte
@@ -159,11 +155,8 @@ type Codec struct {
 	disfixToTypeInfo map[DisfixBytes]*TypeInfo
 	nameToTypeInfo   map[string]*TypeInfo
 
-	nameToConcreteMarshaller   map[string]ConcreteMarshaller
-	nameToConcreteUnmarshaller map[string]ConcreteUnmarshaller
-
-	marshalerMtx   sync.RWMutex
-	unmarshalerMtx sync.RWMutex
+	nameToConcreteMarshaller   sync.Map
+	nameToConcreteUnmarshaller sync.Map
 }
 
 func NewCodec() *Codec {
@@ -174,32 +167,6 @@ func NewCodec() *Codec {
 		nameToTypeInfo:   make(map[string]*TypeInfo),
 	}
 	return cdc
-}
-
-func (cdc *Codec) getMarshaler(name string) (ConcreteMarshaller, bool) {
-	cdc.marshalerMtx.RLock()
-	marshaler, ok := cdc.nameToConcreteMarshaller[name]
-	cdc.marshalerMtx.RUnlock()
-	return marshaler, ok
-}
-
-func (cdc *Codec) setMarshaler(name string, marshaler ConcreteMarshaller) {
-	cdc.marshalerMtx.Lock()
-	cdc.nameToConcreteMarshaller[name] = marshaler
-	cdc.marshalerMtx.Unlock()
-}
-
-func (cdc *Codec) getUnmarshaler(name string) (ConcreteUnmarshaller, bool) {
-	cdc.unmarshalerMtx.RLock()
-	unmarshaler, ok := cdc.nameToConcreteUnmarshaller[name]
-	cdc.unmarshalerMtx.RUnlock()
-	return unmarshaler, ok
-}
-
-func (cdc *Codec) setUnmarshaler(name string, unmarshaler ConcreteUnmarshaller) {
-	cdc.unmarshalerMtx.Lock()
-	cdc.nameToConcreteUnmarshaller[name] = unmarshaler
-	cdc.unmarshalerMtx.Unlock()
 }
 
 // GetTypePrefix copy type prefix bytes of o into dst
@@ -370,11 +337,11 @@ func (cdc *Codec) RegisterConcreteMarshaller(name string, marshaller ConcreteMar
 		panic(fmt.Sprintf("name <%s> should register concrete type first", name))
 	}
 
-	if _, ok := cdc.getMarshaler(name); ok {
+	if _, ok := cdc.nameToConcreteMarshaller.Load(name); ok {
 		panic(fmt.Sprintf("marshaller already registered for %s", name))
 	}
 
-	cdc.setMarshaler(name, marshaller)
+	cdc.nameToConcreteMarshaller.Store(name, marshaller)
 }
 
 // RegisterConcreteUnmarshaller registers a custom unmarshaller for a concrete type
@@ -388,11 +355,11 @@ func (cdc *Codec) RegisterConcreteUnmarshaller(name string, unmarshaller Concret
 		panic(fmt.Sprintf("name <%s> should register concrete type first", name))
 	}
 
-	if _, ok := cdc.getUnmarshaler(name); ok {
+	if _, ok := cdc.nameToConcreteUnmarshaller.Load(name); ok {
 		panic(fmt.Sprintf("unmarshaller already registered for %s", name))
 	}
 
-	cdc.setUnmarshaler(name, unmarshaller)
+	cdc.nameToConcreteUnmarshaller.Store(name, unmarshaller)
 }
 
 func (cdc *Codec) Seal() *Codec {
