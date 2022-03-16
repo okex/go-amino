@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"sync"
 	"time"
+	"unsafe"
 )
 
 //----------------------------------------
@@ -508,13 +510,36 @@ func (cdc *Codec) MarshalBinaryBareWithRegisteredMarshaller(o interface{}) ([]by
 	}
 }
 
+// noescape hides a pointer from escape analysis. It is the identity function
+// but escape analysis doesn't think the output depends on the input.
+// noescape is inlined and currently compiles down to zero instructions.
+// USE CAREFULLY!
+// This was copied from the runtime; see issues 23382 and 7921.
+//go:nosplit
+//go:nocheckptr
+func noescape(p unsafe.Pointer) unsafe.Pointer {
+	x := uintptr(p)
+	return unsafe.Pointer(x ^ 0)
+}
+
+var sizerBufferPool = sync.Pool{
+	New: func() interface{} {
+		return new(bytes.Buffer)
+	},
+}
+
 func (cdc *Codec) MarshalBinaryBareWithSizer(o MarshalBufferSizer) ([]byte, error) {
 	var typePrefix [8]byte
 	n, err := cdc.GetTypePrefix(o, typePrefix[:])
 	if err != nil {
 		return nil, err
 	}
-	var buf = bytes.NewBuffer(make([]byte, 0, n+o.AminoSize(cdc)))
+	var buf = sizerBufferPool.Get().(*bytes.Buffer)
+	defer sizerBufferPool.Put(buf)
+	buf.Reset()
+	buf.Grow(n + o.AminoSize(cdc))
+
+	// var buf = bytes.NewBuffer(make([]byte, 0, n+o.AminoSize(cdc)))
 	if n > 0 {
 		buf.Write(typePrefix[:n])
 	}
@@ -522,7 +547,9 @@ func (cdc *Codec) MarshalBinaryBareWithSizer(o MarshalBufferSizer) ([]byte, erro
 	if err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), nil
+	res := make([]byte, buf.Len())
+	copy(res, buf.Bytes())
+	return res, nil
 }
 
 // UnmarshalBinaryBareInterfaceWithRegisteredUbmarshaller try to unmarshal the data with custom unmarshaller if it exists
