@@ -44,6 +44,10 @@ type Sizer interface {
 	AminoSize(*Codec) int
 }
 
+func NewSizerError(value Sizer, expectSize, actualSize int) error {
+	return fmt.Errorf("%T %+v amino size error, expect %d, actual %d", value, value, expectSize, actualSize)
+}
+
 type MarshalBufferSizer interface {
 	MarshalAminoTo(*Codec, *bytes.Buffer) error
 	Sizer
