@@ -44,7 +44,7 @@ type Sizer interface {
 	AminoSize(*Codec) int
 }
 
-func NewSizerError(value Sizer, expectSize, actualSize int) error {
+func NewSizerError(value interface{}, expectSize, actualSize int) error {
 	return fmt.Errorf("%T %+v amino size error, expect %d, actual %d", value, value, expectSize, actualSize)
 }
 
