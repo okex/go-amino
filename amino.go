@@ -514,12 +514,11 @@ func (cdc *Codec) MarshalBinaryBareWithSizer(o MarshalBufferSizer) ([]byte, erro
 	if err != nil {
 		return nil, err
 	}
-	var buf bytes.Buffer
-	buf.Grow(n + o.AminoSize(cdc))
+	var buf = bytes.NewBuffer(make([]byte, 0, n+o.AminoSize(cdc)))
 	if n > 0 {
 		buf.Write(typePrefix[:n])
 	}
-	err = o.MarshalAminoTo(cdc, &buf)
+	err = o.MarshalAminoTo(cdc, buf)
 	if err != nil {
 		return nil, err
 	}
