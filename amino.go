@@ -508,6 +508,24 @@ func (cdc *Codec) MarshalBinaryBareWithRegisteredMarshaller(o interface{}) ([]by
 	}
 }
 
+func (cdc *Codec) MarshalBinaryBareWithSizer(o MarshalBufferSizer) ([]byte, error) {
+	var typePrefix [8]byte
+	n, err := cdc.GetTypePrefix(o, typePrefix[:])
+	if err != nil {
+		return nil, err
+	}
+	var buf bytes.Buffer
+	buf.Grow(n + o.AminoSize(cdc))
+	if n > 0 {
+		buf.Write(typePrefix[:n])
+	}
+	err = o.MarshalAminoTo(cdc, &buf)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
 // UnmarshalBinaryBareInterfaceWithRegisteredUbmarshaller try to unmarshal the data with custom unmarshaller if it exists
 func (cdc *Codec) UnmarshalBinaryBareWithRegisteredUnmarshaller(bz []byte, ptr interface{}) (interface{}, error) {
 	rv := reflect.ValueOf(ptr)
