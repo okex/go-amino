@@ -530,7 +530,10 @@ var sizerBufferPool = sync.Pool{
 
 func (cdc *Codec) MarshalBinaryBareWithSizer(o MarshalBufferSizer) ([]byte, error) {
 	var typePrefix [8]byte
-	n, err := cdc.GetTypePrefix(o, typePrefix[:])
+	n, info, err := cdc.getConcretTypeInfoAndPrefix(o, typePrefix[:])
+	if !info.MarshalBufferSizerEnabled {
+		return nil, fmt.Errorf("MarshalBinaryBareWithSizer is disabled for %v", info.Type)
+	}
 	if err != nil {
 		return nil, err
 	}
