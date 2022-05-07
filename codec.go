@@ -44,6 +44,10 @@ type Sizer interface {
 	AminoSize(*Codec) int
 }
 
+func NewSizerError(value interface{}, expectSize, actualSize int) error {
+	return fmt.Errorf("%T %+v amino size error, expect %d, actual %d", value, value, expectSize, actualSize)
+}
+
 type MarshalBufferSizer interface {
 	MarshalAminoTo(*Codec, *bytes.Buffer) error
 	Sizer
@@ -109,6 +113,8 @@ type ConcreteInfo struct {
 	AminoMarshalReprType   reflect.Type // <ReprType>
 	IsAminoUnmarshaler     bool         // Implements UnmarshalAmino(<ReprObject>) (error).
 	AminoUnmarshalReprType reflect.Type // <ReprType>
+
+	MarshalBufferSizerEnabled bool
 }
 
 type StructInfo struct {
@@ -173,28 +179,33 @@ func NewCodec() *Codec {
 // len(dst) must >= 8
 // return (length of prefix, error)
 func (cdc *Codec) GetTypePrefix(o interface{}, dst []byte) (int, error) {
+	n, _, err := cdc.getConcretTypeInfoAndPrefix(o, dst)
+	return n, err
+}
+
+func (cdc *Codec) getConcretTypeInfoAndPrefix(o interface{}, dst []byte) (int, *TypeInfo, error) {
 	var rv, _, isNilPtr = derefPointers(reflect.ValueOf(o))
 	if isNilPtr {
-		return 0, errors.New("cannot parse a nil pointer directly.")
+		return 0, nil, errors.New("cannot parse a nil pointer directly.")
 	}
 
 	rt := rv.Type()
 	info, err := cdc.getTypeInfo_wlock(rt)
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
 
 	if info.Type.Kind() == reflect.Interface {
 		var iinfo = info
 		if rv.IsNil() {
-			return 0, errors.New("cannot parse nil interface")
+			return 0, nil, errors.New("cannot parse nil interface")
 		}
 		var crv, isPtr, isNilPtr = derefPointers(rv.Elem())
 		if isPtr && crv.Kind() == reflect.Interface {
-			return 0, errors.New("should not happen")
+			return 0, nil, errors.New("should not happen")
 		}
 		if isNilPtr {
-			return 0, errors.New("cannot parse nil interface")
+			return 0, nil, errors.New("cannot parse nil interface")
 		}
 		var crt = crv.Type()
 
@@ -202,10 +213,10 @@ func (cdc *Codec) GetTypePrefix(o interface{}, dst []byte) (int, error) {
 		var cinfo *TypeInfo
 		cinfo, err = cdc.getTypeInfo_wlock(crt)
 		if err != nil {
-			return 0, err
+			return 0, nil, err
 		}
 		if !cinfo.Registered {
-			return 0, fmt.Errorf("Cannot encode unregistered concrete type %v.", crt)
+			return 0, nil, fmt.Errorf("Cannot encode unregistered concrete type %v.", crt)
 		}
 
 		var needDisamb = false
@@ -218,17 +229,17 @@ func (cdc *Codec) GetTypePrefix(o interface{}, dst []byte) (int, error) {
 		if needDisamb {
 			dst[0] = 0
 			copy(dst[1:], cinfo.Disamb[:])
-			copy(dst[4:], iinfo.Prefix[:])
-			return 8, nil
+			copy(dst[4:], cinfo.Prefix[:])
+			return 8, cinfo, nil
 		} else {
 			copy(dst, cinfo.Prefix[:])
-			return 4, nil
+			return 4, cinfo, nil
 		}
 	} else if info.Registered {
 		copy(dst, info.Prefix[:])
-		return 4, nil
+		return 4, info, nil
 	}
-	return 0, nil
+	return 0, info, nil
 }
 
 // This function should be used to register all interfaces that will be
@@ -342,6 +353,25 @@ func (cdc *Codec) RegisterConcreteMarshaller(name string, marshaller ConcreteMar
 	}
 
 	cdc.nameToConcreteMarshaller.Store(name, marshaller)
+}
+
+func (cdc *Codec) EnableBufferMarshaler(o MarshalBufferSizer) {
+	cdc.assertNotSealed()
+
+	var rv, _, isNilPtr = derefPointers(reflect.ValueOf(o))
+	if isNilPtr {
+		panic(errors.New("cannot parse a nil pointer directly."))
+	}
+
+	rt := rv.Type()
+	if rt.Kind() == reflect.Interface {
+		panic(fmt.Errorf("Unregistered interface %v", rt))
+	}
+	info, err := cdc.getTypeInfo_wlock(rt)
+	if err != nil {
+		panic(err)
+	}
+	info.MarshalBufferSizerEnabled = true
 }
 
 // RegisterConcreteUnmarshaller registers a custom unmarshaller for a concrete type
