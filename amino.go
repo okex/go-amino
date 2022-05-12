@@ -528,7 +528,7 @@ var sizerBufferPool = sync.Pool{
 	},
 }
 
-func (cdc *Codec) MarshalBinaryBareWithSizer(o MarshalBufferSizer) ([]byte, error) {
+func (cdc *Codec) MarshalBinaryBareWithSizer(o MarshalBufferSizer, withLengthPrefix bool) ([]byte, error) {
 	var typePrefix [8]byte
 	n, info, err := cdc.getConcretTypeInfoAndPrefix(o, typePrefix[:])
 	if !info.MarshalBufferSizerEnabled {
@@ -537,10 +537,23 @@ func (cdc *Codec) MarshalBinaryBareWithSizer(o MarshalBufferSizer) ([]byte, erro
 	if err != nil {
 		return nil, err
 	}
+
+	bzSize := n + o.AminoSize(cdc)
+	size := bzSize
+	if withLengthPrefix {
+		size = bzSize + UvarintSize(uint64(bzSize))
+	}
 	var buf = sizerBufferPool.Get().(*bytes.Buffer)
 	defer sizerBufferPool.Put(buf)
 	buf.Reset()
-	buf.Grow(n + o.AminoSize(cdc))
+	buf.Grow(size)
+
+	if withLengthPrefix {
+		err = EncodeUvarintToBuffer(buf, uint64(bzSize))
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	// var buf = bytes.NewBuffer(make([]byte, 0, n+o.AminoSize(cdc)))
 	if n > 0 {
@@ -549,6 +562,9 @@ func (cdc *Codec) MarshalBinaryBareWithSizer(o MarshalBufferSizer) ([]byte, erro
 	err = o.MarshalAminoTo(cdc, buf)
 	if err != nil {
 		return nil, err
+	}
+	if withLengthPrefix && buf.Len() != size {
+		return nil, fmt.Errorf("expected size to be %v, got %v", size, buf.Len())
 	}
 	res := make([]byte, buf.Len())
 	copy(res, buf.Bytes())
