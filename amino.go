@@ -521,8 +521,8 @@ func noescape(p unsafe.Pointer) unsafe.Pointer {
 	return unsafe.Pointer(x ^ 0)
 }
 
-func (cdc *Codec) MustMarshalBinaryBareWithSizer(o MarshalBufferSizer, withLengthPrefix bool) []byte {
-	bz, err := cdc.MarshalBinaryBareWithSizer(o, withLengthPrefix)
+func (cdc *Codec) MustMarshalBinaryWithSizer(o MarshalBufferSizer, withLengthPrefix bool) []byte {
+	bz, err := cdc.MarshalBinaryWithSizer(o, withLengthPrefix)
 	if err != nil {
 		if !withLengthPrefix {
 			return cdc.MustMarshalBinaryBare(o)
@@ -533,7 +533,7 @@ func (cdc *Codec) MustMarshalBinaryBareWithSizer(o MarshalBufferSizer, withLengt
 	return bz
 }
 
-func (cdc *Codec) MarshalBinaryBareWithSizer(o MarshalBufferSizer, withLengthPrefix bool) ([]byte, error) {
+func (cdc *Codec) MarshalBinaryWithSizer(o MarshalBufferSizer, withLengthPrefix bool) ([]byte, error) {
 	var typePrefix [8]byte
 	n, info, err := cdc.getConcretTypeInfoAndPrefix(o, typePrefix[:])
 	if !info.MarshalBufferSizerEnabled {
