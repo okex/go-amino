@@ -537,7 +537,12 @@ func (cdc *Codec) MarshalBinaryBareWithSizer(o MarshalBufferSizer, withLengthPre
 		size = bzSize + UvarintSize(uint64(bzSize))
 	}
 
-	var buf = bytes.NewBuffer(make([]byte, 0, size))
+	var buf *bytes.Buffer
+	if size == 0 {
+		buf = new(bytes.Buffer)
+	} else {
+		buf = bytes.NewBuffer(make([]byte, 0, size))
+	}
 
 	if withLengthPrefix {
 		err = EncodeUvarintToBuffer(buf, uint64(bzSize))
