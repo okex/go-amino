@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"reflect"
-	"sync"
 	"time"
 	"unsafe"
 )
@@ -522,12 +521,6 @@ func noescape(p unsafe.Pointer) unsafe.Pointer {
 	return unsafe.Pointer(x ^ 0)
 }
 
-var sizerBufferPool = sync.Pool{
-	New: func() interface{} {
-		return new(bytes.Buffer)
-	},
-}
-
 func (cdc *Codec) MarshalBinaryBareWithSizer(o MarshalBufferSizer, withLengthPrefix bool) ([]byte, error) {
 	var typePrefix [8]byte
 	n, info, err := cdc.getConcretTypeInfoAndPrefix(o, typePrefix[:])
@@ -543,10 +536,8 @@ func (cdc *Codec) MarshalBinaryBareWithSizer(o MarshalBufferSizer, withLengthPre
 	if withLengthPrefix {
 		size = bzSize + UvarintSize(uint64(bzSize))
 	}
-	var buf = sizerBufferPool.Get().(*bytes.Buffer)
-	defer sizerBufferPool.Put(buf)
-	buf.Reset()
-	buf.Grow(size)
+
+	var buf = bytes.NewBuffer(make([]byte, 0, size))
 
 	if withLengthPrefix {
 		err = EncodeUvarintToBuffer(buf, uint64(bzSize))
@@ -566,9 +557,7 @@ func (cdc *Codec) MarshalBinaryBareWithSizer(o MarshalBufferSizer, withLengthPre
 	if withLengthPrefix && buf.Len() != size {
 		return nil, fmt.Errorf("expected size to be %v, got %v", size, buf.Len())
 	}
-	res := make([]byte, buf.Len())
-	copy(res, buf.Bytes())
-	return res, nil
+	return buf.Bytes(), nil
 }
 
 // UnmarshalBinaryBareInterfaceWithRegisteredUbmarshaller try to unmarshal the data with custom unmarshaller if it exists
