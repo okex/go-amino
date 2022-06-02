@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"reflect"
-	"sync"
 	"time"
 	"unsafe"
 )
@@ -522,13 +521,19 @@ func noescape(p unsafe.Pointer) unsafe.Pointer {
 	return unsafe.Pointer(x ^ 0)
 }
 
-var sizerBufferPool = sync.Pool{
-	New: func() interface{} {
-		return new(bytes.Buffer)
-	},
+func (cdc *Codec) MustMarshalBinaryWithSizer(o MarshalBufferSizer, withLengthPrefix bool) []byte {
+	bz, err := cdc.MarshalBinaryWithSizer(o, withLengthPrefix)
+	if err != nil {
+		if !withLengthPrefix {
+			return cdc.MustMarshalBinaryBare(o)
+		} else {
+			return cdc.MustMarshalBinaryLengthPrefixed(o)
+		}
+	}
+	return bz
 }
 
-func (cdc *Codec) MarshalBinaryBareWithSizer(o MarshalBufferSizer) ([]byte, error) {
+func (cdc *Codec) MarshalBinaryWithSizer(o MarshalBufferSizer, withLengthPrefix bool) ([]byte, error) {
 	var typePrefix [8]byte
 	n, info, err := cdc.getConcretTypeInfoAndPrefix(o, typePrefix[:])
 	if !info.MarshalBufferSizerEnabled {
@@ -537,10 +542,26 @@ func (cdc *Codec) MarshalBinaryBareWithSizer(o MarshalBufferSizer) ([]byte, erro
 	if err != nil {
 		return nil, err
 	}
-	var buf = sizerBufferPool.Get().(*bytes.Buffer)
-	defer sizerBufferPool.Put(buf)
-	buf.Reset()
-	buf.Grow(n + o.AminoSize(cdc))
+
+	bzSize := n + o.AminoSize(cdc)
+	size := bzSize
+	if withLengthPrefix {
+		size = bzSize + UvarintSize(uint64(bzSize))
+	}
+
+	var buf *bytes.Buffer
+	if size == 0 {
+		buf = new(bytes.Buffer)
+	} else {
+		buf = bytes.NewBuffer(make([]byte, 0, size))
+	}
+
+	if withLengthPrefix {
+		err = EncodeUvarintToBuffer(buf, uint64(bzSize))
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	// var buf = bytes.NewBuffer(make([]byte, 0, n+o.AminoSize(cdc)))
 	if n > 0 {
@@ -550,9 +571,10 @@ func (cdc *Codec) MarshalBinaryBareWithSizer(o MarshalBufferSizer) ([]byte, erro
 	if err != nil {
 		return nil, err
 	}
-	res := make([]byte, buf.Len())
-	copy(res, buf.Bytes())
-	return res, nil
+	if withLengthPrefix && buf.Len() != size {
+		return nil, fmt.Errorf("expected size to be %v, got %v", size, buf.Len())
+	}
+	return buf.Bytes(), nil
 }
 
 // UnmarshalBinaryBareInterfaceWithRegisteredUbmarshaller try to unmarshal the data with custom unmarshaller if it exists
