@@ -595,7 +595,7 @@ func (cdc *Codec) UnmarshalBinaryBareWithRegisteredUnmarshaller(bz []byte, ptr i
 	if rv.Kind() != reflect.Ptr {
 		panic("Unmarshal expects a pointer")
 	}
-	rv = rv.Elem()
+	// rv = rv.Elem()
 	rt := rv.Type()
 
 	iinfo, err := cdc.getTypeInfo_wlock(rt)
