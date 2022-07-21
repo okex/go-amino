@@ -54,18 +54,3 @@ func DecodeByteSliceWithoutCopy(source *[]byte) ([]byte, error) {
 	*source = bz[int(count):]
 	return ret, nil
 }
-
-func DecodeKey(data []byte, pbKey ...byte) ([]byte, error) {
-	if len(pbKey) == 0 {
-		return nil, errors.New("pbKey is empty")
-	}
-	if len(data) < len(pbKey) {
-		return nil, errors.New("data is too short")
-	}
-	for i := 0; i < len(pbKey); i++ {
-		if data[i] != pbKey[i] {
-			return nil, fmt.Errorf("pbKey error, epxected %v, got %v", pbKey[i], data[i])
-		}
-	}
-	return data[len(pbKey):], nil
-}
