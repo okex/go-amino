@@ -1,7 +1,6 @@
 package amino
 
 import (
-	"errors"
 	"fmt"
 	"math"
 )
