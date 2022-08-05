@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"sync"
 	"time"
 	"unsafe"
 )
@@ -536,6 +537,12 @@ func (cdc *Codec) MustMarshalBinaryWithSizer(o MarshalBufferSizer, withLengthPre
 	return bz
 }
 
+var bufPool = &sync.Pool{
+	New: func() interface{} {
+		return new(bytes.Buffer)
+	},
+}
+
 func (cdc *Codec) MarshalBinaryWithSizer(o MarshalBufferSizer, withLengthPrefix bool) ([]byte, error) {
 	var typePrefix [8]byte
 	n, info, err := cdc.getConcretTypeInfoAndPrefix(o, typePrefix[:])
@@ -556,7 +563,9 @@ func (cdc *Codec) MarshalBinaryWithSizer(o MarshalBufferSizer, withLengthPrefix 
 	if size == 0 {
 		buf = new(bytes.Buffer)
 	} else {
-		buf = bytes.NewBuffer(make([]byte, 0, size))
+		buf = bufPool.Get().(*bytes.Buffer)
+		defer bufPool.Put(buf)
+		*buf = *bytes.NewBuffer(make([]byte, 0, size))
 	}
 
 	if withLengthPrefix {
@@ -586,7 +595,7 @@ func (cdc *Codec) UnmarshalBinaryBareWithRegisteredUnmarshaller(bz []byte, ptr i
 	if rv.Kind() != reflect.Ptr {
 		panic("Unmarshal expects a pointer")
 	}
-	rv = rv.Elem()
+	// rv = rv.Elem()
 	rt := rv.Type()
 
 	iinfo, err := cdc.getTypeInfo_wlock(rt)

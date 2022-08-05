@@ -19,6 +19,16 @@ func DecodeInt(bz []byte) (i int, n int, err error) {
 	return
 }
 
+func DecodeIntUpdateBytes(bz *[]byte) (i int, err error) {
+	var n int
+	i, n, err = DecodeInt(*bz)
+	if err != nil {
+		return
+	}
+	*bz = (*bz)[n:]
+	return
+}
+
 // Deprecated: use DecodeInt
 func DecodeIntFromUvarint(bz []byte) (i int, n int, err error) {
 	return DecodeInt(bz)
