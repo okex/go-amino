@@ -39,6 +39,22 @@ func DecodeUvarintUpdateBytes(bz *[]byte) (i uint64, err error) {
 	return
 }
 
+func UpdateByteSlice(dst *[]byte, src []byte) {
+	if len(src) == 0 {
+		*dst = nil
+	} else {
+		var newBz []byte
+		dstBz := *dst
+		if cap(dstBz) >= len(src) {
+			newBz = dstBz[:len(src)]
+		} else {
+			newBz = make([]byte, len(src))
+		}
+		copy(newBz, src)
+		*dst = newBz
+	}
+}
+
 // Deprecated: use DecodeInt
 func DecodeIntFromUvarint(bz []byte) (i int, n int, err error) {
 	return DecodeInt(bz)
