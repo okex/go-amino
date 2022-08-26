@@ -29,6 +29,8 @@ func DecodeIntUpdateBytes(bz *[]byte) (i int, err error) {
 	return
 }
 
+// DecodeUvarintUpdateBytes will decode a uvarint from the input bytes,
+// and update the input bytes to be the remaining bytes after the uvarint.
 func DecodeUvarintUpdateBytes(bz *[]byte) (i uint64, err error) {
 	var n int
 	i, n, err = DecodeUvarint(*bz)
@@ -39,6 +41,7 @@ func DecodeUvarintUpdateBytes(bz *[]byte) (i uint64, err error) {
 	return
 }
 
+// UpdateByteSlice will try copy src to dst with amino rules.
 func UpdateByteSlice(dst *[]byte, src []byte) {
 	if len(src) == 0 {
 		*dst = nil
