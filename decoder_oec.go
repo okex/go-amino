@@ -19,6 +19,8 @@ func DecodeInt(bz []byte) (i int, n int, err error) {
 	return
 }
 
+// DecodeIntUpdateBytes will decode a int from the input bytes,
+// and update the input bytes to be the remaining bytes after the int.
 func DecodeIntUpdateBytes(bz *[]byte) (i int, err error) {
 	var n int
 	i, n, err = DecodeInt(*bz)
@@ -58,11 +60,9 @@ func UpdateByteSlice(dst *[]byte, src []byte) {
 	}
 }
 
-// Deprecated: use DecodeInt
-func DecodeIntFromUvarint(bz []byte) (i int, n int, err error) {
-	return DecodeInt(bz)
-}
-
+// DecodeByteSliceWithoutCopy will decode a byte slice from the input bytes,
+// and update the input bytes to be the remaining bytes after the byte slice.
+// the decoded byte slice just a reference to the input bytes.
 func DecodeByteSliceWithoutCopy(source *[]byte) ([]byte, error) {
 	bz := *source
 	count, _n, err := DecodeUvarint(bz)
