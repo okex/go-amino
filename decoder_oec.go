@@ -19,6 +19,8 @@ func DecodeInt(bz []byte) (i int, n int, err error) {
 	return
 }
 
+// DecodeIntUpdateBytes will decode a int from the input bytes,
+// and update the input bytes to be the remaining bytes after the int.
 func DecodeIntUpdateBytes(bz *[]byte) (i int, err error) {
 	var n int
 	i, n, err = DecodeInt(*bz)
@@ -29,11 +31,38 @@ func DecodeIntUpdateBytes(bz *[]byte) (i int, err error) {
 	return
 }
 
-// Deprecated: use DecodeInt
-func DecodeIntFromUvarint(bz []byte) (i int, n int, err error) {
-	return DecodeInt(bz)
+// DecodeUvarintUpdateBytes will decode a uvarint from the input bytes,
+// and update the input bytes to be the remaining bytes after the uvarint.
+func DecodeUvarintUpdateBytes(bz *[]byte) (i uint64, err error) {
+	var n int
+	i, n, err = DecodeUvarint(*bz)
+	if err != nil {
+		return
+	}
+	*bz = (*bz)[n:]
+	return
 }
 
+// UpdateByteSlice will try copy src to dst under the rules of the amino.
+func UpdateByteSlice(dst *[]byte, src []byte) {
+	if len(src) == 0 {
+		*dst = nil
+	} else {
+		var newBz []byte
+		dstBz := *dst
+		if cap(dstBz) >= len(src) {
+			newBz = dstBz[:len(src)]
+		} else {
+			newBz = make([]byte, len(src))
+		}
+		copy(newBz, src)
+		*dst = newBz
+	}
+}
+
+// DecodeByteSliceWithoutCopy will decode a byte slice from the input bytes,
+// and update the input bytes to be the remaining bytes after the byte slice.
+// the decoded byte slice just a reference to the input bytes.
 func DecodeByteSliceWithoutCopy(source *[]byte) ([]byte, error) {
 	bz := *source
 	count, _n, err := DecodeUvarint(bz)
