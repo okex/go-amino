@@ -43,7 +43,7 @@ func DecodeUvarintUpdateBytes(bz *[]byte) (i uint64, err error) {
 	return
 }
 
-// UpdateByteSlice will try copy src to dst with amino rules.
+// UpdateByteSlice will try copy src to dst under the rules of the amino.
 func UpdateByteSlice(dst *[]byte, src []byte) {
 	if len(src) == 0 {
 		*dst = nil
